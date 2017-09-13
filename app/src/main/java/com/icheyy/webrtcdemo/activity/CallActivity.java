@@ -1,9 +1,6 @@
-package com.icheyy.webrtcdemo;
+package com.icheyy.webrtcdemo.activity;
 
-import android.app.Activity;
 import android.content.Intent;
-import android.graphics.Point;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.text.TextUtils;
@@ -12,7 +9,10 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
 
-import com.inesadt.webrtcdemo.PeerConnectionParameters;
+import com.icheyy.webrtcdemo.ProxyRenderer;
+import com.icheyy.webrtcdemo.R;
+import com.icheyy.webrtcdemo.WebRTCClient;
+import com.icheyy.webrtcdemo.base.BaseAppActivity;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -47,14 +47,67 @@ import okhttp3.OkHttpClient;
 
 //import org.webrtc.VideoRendererGui;
 
-public class SelectCallerActivity extends Activity implements WebRTCClient.RtcListener {
+public class CallActivity extends BaseAppActivity implements WebRTCClient.RtcListener {
 
-    private static final String TAG = SelectCallerActivity.class.getSimpleName();
+    private static final String TAG = CallActivity.class.getSimpleName();
 
 
-    public static final String EXTRA_USER_NAME = "com.icheyy.USERNAME";
+    public static final String EXTRA_USER_NAME = "com.icheyy.webrtc.USERNAME";
+    public static final String EXTRA_VIDEO_CALL = "com.icheyy.webrtc.VIDEO_CALL";
+    public static final String EXTRA_SCREENCAPTURE = "com.icheyy.webrtc.SCREENCAPTURE";
+    public static final String EXTRA_CAMERA2 = "com.icheyy.webrtc.CAMERA2";
+    public static final String EXTRA_VIDEO_WIDTH = "com.icheyy.webrtc.VIDEO_WIDTH";
+    public static final String EXTRA_VIDEO_HEIGHT = "com.icheyy.webrtc.VIDEO_HEIGHT";
+    public static final String EXTRA_VIDEO_FPS = "com.icheyy.webrtc.VIDEO_FPS";
+    public static final String EXTRA_VIDEO_CAPTUREQUALITYSLIDER_ENABLED =
+            "org.appsopt.apprtc.VIDEO_CAPTUREQUALITYSLIDER";
+    public static final String EXTRA_VIDEO_BITRATE = "com.icheyy.webrtc.VIDEO_BITRATE";
+    public static final String EXTRA_VIDEOCODEC = "com.icheyy.webrtc.VIDEOCODEC";
+    public static final String EXTRA_HWCODEC_ENABLED = "com.icheyy.webrtc.HWCODEC";
+    public static final String EXTRA_CAPTURETOTEXTURE_ENABLED = "com.icheyy.webrtc.CAPTURETOTEXTURE";
+    public static final String EXTRA_FLEXFEC_ENABLED = "com.icheyy.webrtc.FLEXFEC";
+    public static final String EXTRA_AUDIO_BITRATE = "com.icheyy.webrtc.AUDIO_BITRATE";
+    public static final String EXTRA_AUDIOCODEC = "com.icheyy.webrtc.AUDIOCODEC";
+    public static final String EXTRA_NOAUDIOPROCESSING_ENABLED =
+            "com.icheyy.webrtc.NOAUDIOPROCESSING";
+    public static final String EXTRA_AECDUMP_ENABLED = "com.icheyy.webrtc.AECDUMP";
+    public static final String EXTRA_OPENSLES_ENABLED = "com.icheyy.webrtc.OPENSLES";
+    public static final String EXTRA_DISABLE_BUILT_IN_AEC = "com.icheyy.webrtc.DISABLE_BUILT_IN_AEC";
+    public static final String EXTRA_DISABLE_BUILT_IN_AGC = "com.icheyy.webrtc.DISABLE_BUILT_IN_AGC";
+    public static final String EXTRA_DISABLE_BUILT_IN_NS = "com.icheyy.webrtc.DISABLE_BUILT_IN_NS";
+    public static final String EXTRA_ENABLE_LEVEL_CONTROL = "com.icheyy.webrtc.ENABLE_LEVEL_CONTROL";
+    public static final String EXTRA_DISABLE_WEBRTC_AGC_AND_HPF =
+            "com.icheyy.webrtc.DISABLE_WEBRTC_GAIN_CONTROL";
+    public static final String EXTRA_DISPLAY_HUD = "com.icheyy.webrtc.DISPLAY_HUD";
+    public static final String EXTRA_TRACING = "com.icheyy.webrtc.TRACING";
+    public static final String EXTRA_CMDLINE = "com.icheyy.webrtc.CMDLINE";
+    public static final String EXTRA_RUNTIME = "com.icheyy.webrtc.RUNTIME";
+    public static final String EXTRA_VIDEO_FILE_AS_CAMERA = "com.icheyy.webrtc.VIDEO_FILE_AS_CAMERA";
+    public static final String EXTRA_SAVE_REMOTE_VIDEO_TO_FILE =
+            "com.icheyy.webrtc.SAVE_REMOTE_VIDEO_TO_FILE";
+    public static final String EXTRA_SAVE_REMOTE_VIDEO_TO_FILE_WIDTH =
+            "com.icheyy.webrtc.SAVE_REMOTE_VIDEO_TO_FILE_WIDTH";
+    public static final String EXTRA_SAVE_REMOTE_VIDEO_TO_FILE_HEIGHT =
+            "com.icheyy.webrtc.SAVE_REMOTE_VIDEO_TO_FILE_HEIGHT";
+    public static final String EXTRA_USE_VALUES_FROM_INTENT =
+            "com.icheyy.webrtc.USE_VALUES_FROM_INTENT";
+    public static final String EXTRA_DATA_CHANNEL_ENABLED = "com.icheyy.webrtc.DATA_CHANNEL_ENABLED";
+    public static final String EXTRA_ORDERED = "com.icheyy.webrtc.ORDERED";
+    public static final String EXTRA_MAX_RETRANSMITS_MS = "com.icheyy.webrtc.MAX_RETRANSMITS_MS";
+    public static final String EXTRA_MAX_RETRANSMITS = "com.icheyy.webrtc.MAX_RETRANSMITS";
+    public static final String EXTRA_PROTOCOL = "com.icheyy.webrtc.PROTOCOL";
+    public static final String EXTRA_NEGOTIATED = "com.icheyy.webrtc.NEGOTIATED";
+    public static final String EXTRA_ID = "com.icheyy.webrtc.ID";
 
-    private Toast logToast;
+
+
+
+
+
+
+
+
+
 
     private final static int VIDEO_CALL_SENT = 666;
     private static final String VIDEO_CODEC_VP9 = "VP9";
@@ -135,17 +188,7 @@ public class SelectCallerActivity extends Activity implements WebRTCClient.RtcLi
 
         final Intent intent = getIntent();
 
-        // 获取server url
-        Uri serverUri = intent.getData();
-        if (serverUri == null) {
-            logAndToast(getString(R.string.missing_url));
-            Log.e(TAG, "Didn't get any URL in serverUri!");
-            setResult(RESULT_CANCELED);
-            finish();
-            return;
-        }
-        mSocketAddress = serverUri.toString();
-        Log.e(TAG, "onCreate: " +  mSocketAddress);
+
 
         // Get Intent parameters. 取得用户名
         String userName = intent.getStringExtra(EXTRA_USER_NAME);
@@ -158,7 +201,7 @@ public class SelectCallerActivity extends Activity implements WebRTCClient.RtcLi
             return;
         }
 
-        init();
+//        init();
 //        vsv = (GLSurfaceView) findViewById(R.id.glview_call);
 //        vsv.setPreserveEGLContextOnPause(true);
 //        vsv.setKeepScreenOn(true);
@@ -191,15 +234,7 @@ public class SelectCallerActivity extends Activity implements WebRTCClient.RtcLi
 
     private static final String VIDEO_CODEC_VP8 = "VP8";
 
-    private void init() {
-        Point displaySize = new Point();
-        getWindowManager().getDefaultDisplay().getSize(displaySize);
-        Log.d(TAG, "init: displaySize:: x -> " + displaySize.x + ", y -> " + displaySize.y);
-        PeerConnectionParameters pcParams = new PeerConnectionParameters(
-                true, false, displaySize.x, displaySize.y, 30, 1, VIDEO_CODEC_VP9, true, 1, AUDIO_CODEC_OPUS, true);
 
-        pcClient = new WebRTCClient(this, mSocketAddress, getIOOptions(), pcParams, /*VideoRendererGui.getEGLContext(),*/ this);
-    }
 
     private void initViews() {
         mEtName = (EditText) findViewById(R.id.et_name);
@@ -298,11 +333,14 @@ public class SelectCallerActivity extends Activity implements WebRTCClient.RtcLi
             pcClient.onDestroy();
         }
         disconnect();
-        if (logToast != null) {
-            logToast.cancel();
-        }
+
 
         super.onDestroy();
+    }
+
+    @Override
+    public void onConnectSocketFinish(boolean result) {
+
     }
 
     @Override
@@ -314,7 +352,7 @@ public class SelectCallerActivity extends Activity implements WebRTCClient.RtcLi
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        Toast.makeText(SelectCallerActivity.this, id + " DISCONNECTED", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(CallActivity.this, id + " DISCONNECTED", Toast.LENGTH_SHORT).show();
                     }
                 });
                 if (!isSwappedFeeds) setSwappedFeeds(true);
@@ -467,12 +505,5 @@ public class SelectCallerActivity extends Activity implements WebRTCClient.RtcLi
     }
 
 
-    private void logAndToast(String msg) {
-        Log.d(TAG, msg);
-        if (logToast != null) {
-            logToast.cancel();
-        }
-        logToast = Toast.makeText(this, msg, Toast.LENGTH_SHORT);
-        logToast.show();
-    }
+
 }

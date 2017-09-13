@@ -8,6 +8,8 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.icheyy.webrtcdemo.activity.CallActivity;
+import com.icheyy.webrtcdemo.bean.Peer;
 import com.inesadt.webrtcdemo.PeerConnectionParameters;
 
 import org.json.JSONException;
@@ -15,15 +17,12 @@ import org.json.JSONObject;
 import org.webrtc.AudioSource;
 import org.webrtc.Camera1Enumerator;
 import org.webrtc.CameraEnumerator;
-import org.webrtc.DataChannel;
 import org.webrtc.EglBase;
 import org.webrtc.IceCandidate;
 import org.webrtc.MediaConstraints;
 import org.webrtc.MediaStream;
 import org.webrtc.PeerConnection;
 import org.webrtc.PeerConnectionFactory;
-import org.webrtc.RtpReceiver;
-import org.webrtc.SdpObserver;
 import org.webrtc.SessionDescription;
 import org.webrtc.VideoCapturer;
 import org.webrtc.VideoSource;
@@ -59,6 +58,8 @@ public class WebRTCClient {
      * Implement this interface to be notified of events.
      */
     public interface RtcListener {
+        void onConnectSocketFinish(boolean result);
+
         void onStatusChanged(String id, PeerConnection.IceConnectionState iceConnectionState);
 
         void onLocalStream(MediaStream localStream, VideoTrack track);
@@ -78,173 +79,185 @@ public class WebRTCClient {
         mSocket.send(jsonObject.toString());
     }
 
-    private class Peer implements SdpObserver, PeerConnection.Observer {
-        private PeerConnection pc;
-        private String id;
-        private int endPoint;
-
-        @Override
-        public void onCreateSuccess(final SessionDescription sdp) {// createOffer/createAnswer成功回调此方法
-            if (sdp == null) return;
-            Log.d(TAG, "onCreateSuccess: sdp.description:: \n" + sdp.description);
-            Log.i(TAG, "onCreateSuccess: sdp.type.canonicalForm():: " + sdp.type.canonicalForm());
-
-            try {
-                JSONObject payload = new JSONObject();
-                payload.put("type", sdp.type.canonicalForm());
-                payload.put("sdp", sdp.description);
-
-                JSONObject msg = new JSONObject();
-                msg.put("event", sdp.type.canonicalForm());
-                msg.put("connectedUser", mConnectedId);
-                msg.put(sdp.type.canonicalForm(), payload);
-                sendMessage(msg);
-                pc.setLocalDescription(Peer.this, sdp);
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-        }
-
-        @Override
-        public void onSetSuccess() {
-        }
-
-        @Override
-        public void onCreateFailure(String s) {
-            Log.e(TAG, "onCreateFailure: " + s);
-        }
-
-        @Override
-        public void onSetFailure(String s) {
-        }
-
-        @Override
-        public void onSignalingChange(PeerConnection.SignalingState signalingState) {
-        }
-
-        @Override
-        public void onIceConnectionChange(PeerConnection.IceConnectionState iceConnectionState) {
-            Log.i(TAG, "onIceConnectionChange: id:: " + id);
-            Log.d(TAG, "onIceConnectionChange: " + iceConnectionState);
-            if (iceConnectionState == PeerConnection.IceConnectionState.DISCONNECTED) {
-                if (peers != null) {
-                    removePeer(id);
-                }
-            }
-            if (mListener != null) {
-                mListener.onStatusChanged(id, iceConnectionState);
-            }
-        }
-
-        @Override
-        public void onIceConnectionReceivingChange(boolean b) {
-            //===================================
-            Log.d(TAG, "IceConnectionReceiving changed to " + b);
-        }
-
-        @Override
-        public void onIceGatheringChange(PeerConnection.IceGatheringState iceGatheringState) {
-        }
-
-        @Override
-        public void onIceCandidate(final IceCandidate candidate) {
-            if (candidate == null) return;
-            Log.d(TAG, "onIceCandidate: \ncandidate.sdpMLineIndex:: " + candidate.sdpMLineIndex +
-                    "\ncandidate.sdpMid:: " + candidate.sdpMid);
-            Log.d(TAG, "onIceCandidate: candidate.sdp:: \n" + candidate.sdp);
-
-            try {
-                JSONObject payload = new JSONObject();
-                payload.put("sdpMLineIndex", candidate.sdpMLineIndex);
-                payload.put("sdpMid", candidate.sdpMid);
-                payload.put("candidate", candidate.sdp);
-
-                JSONObject msg = new JSONObject();
-                msg.put("event", "candidate");
-                msg.put("connectedUser", mConnectedId);
-                msg.put("candidate", payload);
-                sendMessage(msg);
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-        }
-
-        @Override
-        public void onIceCandidatesRemoved(IceCandidate[] iceCandidates) {
-            //====================================
-            Log.d(TAG, "onIceCandidatesRemoved: ");
-        }
-
-        @Override
-        public void onAddStream(MediaStream mediaStream) {
-            Log.d(TAG, "onAddStream " + mediaStream.label());
-
-            if (mediaStream.videoTracks.size() == 1) {
-                mListener.onAddRemoteStream(mediaStream, endPoint + 1);
-            }
-
-//            // remote streams are displayed from 1 to MAX_PEER (0 is localStream)
-//            mListener.onAddRemoteStream(mediaStream, endPoint + 1);
-        }
-
-        @Override
-        public void onRemoveStream(MediaStream mediaStream) {
-            Log.d(TAG, "onRemoveStream " + mediaStream.label());
-            removePeer(id);
-        }
-
-        @Override
-        public void onDataChannel(DataChannel dataChannel) {
-        }
-
-        @Override
-        public void onRenegotiationNeeded() {
-        }
-
-        @Override
-        public void onAddTrack(RtpReceiver rtpReceiver, MediaStream[] mediaStreams) {
-            //================================
-            Log.d(TAG, "onAddTrack: ");
-        }
-
-        public Peer(String id, int endPoint) {
-            Log.d(TAG, "new Peer: " + id + " " + endPoint);
-
-
-            PeerConnection.RTCConfiguration rtcConfig = new PeerConnection.RTCConfiguration(iceServers);
-            // TCP candidates are only useful when connecting to a server that supports
-            // ICE-TCP.
-            rtcConfig.tcpCandidatePolicy = PeerConnection.TcpCandidatePolicy.DISABLED;
-            rtcConfig.bundlePolicy = PeerConnection.BundlePolicy.MAXBUNDLE;
-            rtcConfig.rtcpMuxPolicy = PeerConnection.RtcpMuxPolicy.REQUIRE;
-            rtcConfig.continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY;
-            // Use ECDSA encryption.
-            rtcConfig.keyType = PeerConnection.KeyType.ECDSA;
-            this.pc = factory.createPeerConnection(rtcConfig, pcConstraints, this);
-
-//            this.pc = factory.createPeerConnection(iceServers, pcConstraints, this);
-
-            this.id = id;
-            this.endPoint = endPoint;
-
-            Log.d(TAG, "Peer: localMS:: " + localMS);
-            pc.addStream(localMS);
-
-//            if (mListener != null) {
-//                mListener.onStatusChanged(id + " CONNECTING");
+//    private class Peer implements SdpObserver, PeerConnection.Observer {
+//        private PeerConnection pc;
+//        private String id;
+//        private int endPoint;
+//
+//        @Override
+//        public void onCreateSuccess(final SessionDescription sdp) {// createOffer/createAnswer成功回调此方法
+//            if (sdp == null) return;
+//            Log.d(TAG, "onCreateSuccess: sdp.description:: \n" + sdp.description);
+//            Log.i(TAG, "onCreateSuccess: sdp.type.canonicalForm():: " + sdp.type.canonicalForm());
+//
+//            try {
+//                JSONObject payload = new JSONObject();
+//                payload.put("type", sdp.type.canonicalForm());
+//                payload.put("sdp", sdp.description);
+//
+//                JSONObject msg = new JSONObject();
+//                msg.put("event", sdp.type.canonicalForm());
+//                msg.put("connectedUser", mConnectedId);
+//                msg.put(sdp.type.canonicalForm(), payload);
+//                sendMessage(msg);
+//                pc.setLocalDescription(Peer.this, sdp);
+//            } catch (JSONException e) {
+//                e.printStackTrace();
 //            }
-        }
-
-        @Override
-        public String toString() {
-            return "Peer{pc: " + pc + ", id: " + id + ", endPoint: " + endPoint + "}";
-        }
-    }
+//        }
+//
+//        @Override
+//        public void onSetSuccess() {
+//        }
+//
+//        @Override
+//        public void onCreateFailure(String s) {
+//            Log.e(TAG, "onCreateFailure: " + s);
+//        }
+//
+//        @Override
+//        public void onSetFailure(String s) {
+//        }
+//
+//        @Override
+//        public void onSignalingChange(PeerConnection.SignalingState signalingState) {
+//        }
+//
+//        @Override
+//        public void onIceConnectionChange(PeerConnection.IceConnectionState iceConnectionState) {
+//            Log.i(TAG, "onIceConnectionChange: id:: " + id);
+//            Log.d(TAG, "onIceConnectionChange: " + iceConnectionState);
+//            if (iceConnectionState == PeerConnection.IceConnectionState.DISCONNECTED) {
+//                if (peers != null) {
+//                    removePeer(id);
+//                }
+//            }
+//            if (mListener != null) {
+//                mListener.onStatusChanged(id, iceConnectionState);
+//            }
+//        }
+//
+//        @Override
+//        public void onIceConnectionReceivingChange(boolean b) {
+//            //===================================
+//            Log.d(TAG, "IceConnectionReceiving changed to " + b);
+//        }
+//
+//        @Override
+//        public void onIceGatheringChange(PeerConnection.IceGatheringState iceGatheringState) {
+//        }
+//
+//        @Override
+//        public void onIceCandidate(final IceCandidate candidate) {
+//            if (candidate == null) return;
+//            Log.d(TAG, "onIceCandidate: \ncandidate.sdpMLineIndex:: " + candidate.sdpMLineIndex +
+//                    "\ncandidate.sdpMid:: " + candidate.sdpMid);
+//            Log.d(TAG, "onIceCandidate: candidate.sdp:: \n" + candidate.sdp);
+//
+//            try {
+//                JSONObject payload = new JSONObject();
+//                payload.put("sdpMLineIndex", candidate.sdpMLineIndex);
+//                payload.put("sdpMid", candidate.sdpMid);
+//                payload.put("candidate", candidate.sdp);
+//
+//                JSONObject msg = new JSONObject();
+//                msg.put("event", "candidate");
+//                msg.put("connectedUser", mConnectedId);
+//                msg.put("candidate", payload);
+//                sendMessage(msg);
+//            } catch (JSONException e) {
+//                e.printStackTrace();
+//            }
+//        }
+//
+//        @Override
+//        public void onIceCandidatesRemoved(IceCandidate[] iceCandidates) {
+//            //====================================
+//            Log.d(TAG, "onIceCandidatesRemoved: ");
+//        }
+//
+//        @Override
+//        public void onAddStream(MediaStream mediaStream) {
+//            Log.d(TAG, "onAddStream " + mediaStream.label());
+//
+//            if (mediaStream.videoTracks.size() == 1) {
+//                mListener.onAddRemoteStream(mediaStream, endPoint + 1);
+//            }
+//
+////            // remote streams are displayed from 1 to MAX_PEER (0 is localStream)
+////            mListener.onAddRemoteStream(mediaStream, endPoint + 1);
+//        }
+//
+//        @Override
+//        public void onRemoveStream(MediaStream mediaStream) {
+//            Log.d(TAG, "onRemoveStream " + mediaStream.label());
+//            removePeer(id);
+//        }
+//
+//        @Override
+//        public void onDataChannel(DataChannel dataChannel) {
+//        }
+//
+//        @Override
+//        public void onRenegotiationNeeded() {
+//        }
+//
+//        @Override
+//        public void onAddTrack(RtpReceiver rtpReceiver, MediaStream[] mediaStreams) {
+//            //================================
+//            Log.d(TAG, "onAddTrack: ");
+//        }
+//
+//        public Peer(String id, int endPoint) {
+//            Log.d(TAG, "new Peer: " + id + " " + endPoint);
+//
+//
+//            PeerConnection.RTCConfiguration rtcConfig = new PeerConnection.RTCConfiguration(iceServers);
+//            // TCP candidates are only useful when connecting to a server that supports
+//            // ICE-TCP.
+//            rtcConfig.tcpCandidatePolicy = PeerConnection.TcpCandidatePolicy.DISABLED;
+//            rtcConfig.bundlePolicy = PeerConnection.BundlePolicy.MAXBUNDLE;
+//            rtcConfig.rtcpMuxPolicy = PeerConnection.RtcpMuxPolicy.REQUIRE;
+//            rtcConfig.continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY;
+//            // Use ECDSA encryption.
+//            rtcConfig.keyType = PeerConnection.KeyType.ECDSA;
+//            this.pc = factory.createPeerConnection(rtcConfig, pcConstraints, this);
+//
+////            this.pc = factory.createPeerConnection(iceServers, pcConstraints, this);
+//
+//            this.id = id;
+//            this.endPoint = endPoint;
+//
+//            Log.d(TAG, "Peer: localMS:: " + localMS);
+//            if(localMS != null) {
+//                pc.addStream(localMS);
+//            }
+//
+////            if (mListener != null) {
+////                mListener.onStatusChanged(id + " CONNECTING");
+////            }
+//        }
+//
+//        @Override
+//        public String toString() {
+//            return "Peer{pc: " + pc + ", id: " + id + ", endPoint: " + endPoint + "}";
+//        }
+//    }
 
     public Peer addPeer(String id, int endPoint) {
-        Peer peer = new Peer(id, endPoint);
-        peers.put(id, peer);
 
+        PeerConnection.RTCConfiguration rtcConfig = new PeerConnection.RTCConfiguration(iceServers);
+        // TCP candidates are only useful when connecting to a server that supports
+        // ICE-TCP.
+        rtcConfig.tcpCandidatePolicy = PeerConnection.TcpCandidatePolicy.DISABLED;
+        rtcConfig.bundlePolicy = PeerConnection.BundlePolicy.MAXBUNDLE;
+        rtcConfig.rtcpMuxPolicy = PeerConnection.RtcpMuxPolicy.REQUIRE;
+        rtcConfig.continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY;
+        // Use ECDSA encryption.
+        rtcConfig.keyType = PeerConnection.KeyType.ECDSA;
+        Peer peer = new Peer(id, endPoint, null);
+        peer.setPeerConnection(factory.createPeerConnection(rtcConfig, pcConstraints, peer));
+        peers.put(id, peer);
         endPoints[endPoint] = true;
         return peer;
     }
@@ -252,10 +265,10 @@ public class WebRTCClient {
     public void removePeer(String id) {
         Peer peer = peers.get(id);
         if (peer == null) return;
-        mListener.onRemoveRemoteStream(peer.endPoint);
+        mListener.onRemoveRemoteStream(peer.getEndPoint());
 //        peer.pc.close();
-        peers.remove(peer.id);
-        endPoints[peer.endPoint] = false;
+        peers.remove(peer.getId());
+        endPoints[peer.getEndPoint()] = false;
     }
 
     public void removeAllPeers() {
@@ -269,14 +282,9 @@ public class WebRTCClient {
         peers.clear();
     }
 
-    private Handler mHandler = SelectCallerActivity.mHandler;
+    private Handler mHandler = CallActivity.mHandler;
     private Context mContext;
 
-    private static final String VIDEO_CODEC_VP8 = "VP8";
-    private static final String VIDEO_CODEC_VP9 = "VP9";
-    private static final String VIDEO_CODEC_H264 = "H264";
-    private static final String VIDEO_CODEC_H264_BASELINE = "H264 Baseline";
-    private static final String VIDEO_CODEC_H264_HIGH = "H264 High";
 
     public WebRTCClient(RtcListener listener, String host, IO.Options options,
                         PeerConnectionParameters params, /*EGLContext mEGLContext, */final Context context) {
@@ -315,7 +323,7 @@ public class WebRTCClient {
             @Override
             public void run() {
                 Log.d(TAG, "run: mSocket.connected():: " + mSocket.connected());
-                Toast.makeText(context, "Socket connect: " + mSocket.connected(), Toast.LENGTH_SHORT).show();
+                mListener.onConnectSocketFinish(mSocket.connected());
             }
         }, 2000);
 
@@ -449,8 +457,8 @@ public class WebRTCClient {
             Peer peer = peers.get(mConnectedId);
             Log.i(TAG, "handleAccept: mConnectedId:: " + mConnectedId);
             Log.d(TAG, "handleAccept: peer:: " + peer);
-            Log.d(TAG, "handleAccept: peerConn:: " + peer.pc);
-            peer.pc.createOffer(peer, pcConstraints);
+            Log.d(TAG, "handleAccept: peerConn:: " + peer.getPeerConnection());
+            peer.getPeerConnection().createOffer(peer, pcConstraints);
         } else {
             mHandler.post(new Runnable() {
                 @Override
@@ -471,8 +479,8 @@ public class WebRTCClient {
                 SessionDescription.Type.fromCanonicalForm(offer.getString("type")),
                 offer.getString("sdp")
         );
-        peer.pc.setRemoteDescription(peer, sdp);
-        peer.pc.createAnswer(peer, pcConstraints);
+        peer.getPeerConnection().setRemoteDescription(peer, sdp);
+        peer.getPeerConnection().createAnswer(peer, pcConstraints);
     }
 
     private void handleCandidate(JSONObject data) throws JSONException {
@@ -480,7 +488,7 @@ public class WebRTCClient {
         Log.d(TAG, "handleCandidate: candidate:: " + candidate);
 
         Peer peer = peers.get(mConnectedId);
-        peer.pc.addIceCandidate(new IceCandidate(candidate.getString("sdpMid"),
+        peer.getPeerConnection().addIceCandidate(new IceCandidate(candidate.getString("sdpMid"),
                 candidate.getInt("sdpMLineIndex"), candidate.getString("candidate")));
     }
 
@@ -497,7 +505,7 @@ public class WebRTCClient {
                 SessionDescription.Type.fromCanonicalForm(answer.getString("type")),
                 answer.getString("sdp")
         );
-        peer.pc.setRemoteDescription(peer, sdp);
+        peer.getPeerConnection().setRemoteDescription(peer, sdp);
     }
 
     public void handleLeave() {
@@ -551,7 +559,7 @@ public class WebRTCClient {
      */
     public void onDestroy() {
         for (Peer peer : peers.values()) {
-            peer.pc.dispose();
+            peer.getPeerConnection().dispose();
         }
         if (videoSource != null) {
             videoSource.dispose();
