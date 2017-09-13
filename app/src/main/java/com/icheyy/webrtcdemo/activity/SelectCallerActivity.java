@@ -216,7 +216,9 @@ public class SelectCallerActivity extends BaseAppActivity implements View.OnClic
 
     @Override
     public void onDestroy() {
-
+        if (pcClient != null) {
+            pcClient.onDestroy();
+        }
         super.onDestroy();
     }
 
@@ -613,5 +615,8 @@ public class SelectCallerActivity extends BaseAppActivity implements View.OnClic
         pcClient.removeAllPeers();
         pcClient.addPeer(name, 0);
     }
+
+  
+
 
 }
