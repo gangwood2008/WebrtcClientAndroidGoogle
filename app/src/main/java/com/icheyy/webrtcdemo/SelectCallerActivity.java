@@ -1,7 +1,9 @@
 package com.icheyy.webrtcdemo;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.graphics.Point;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.text.TextUtils;
@@ -47,7 +49,12 @@ import okhttp3.OkHttpClient;
 
 public class SelectCallerActivity extends Activity implements WebRTCClient.RtcListener {
 
-    private static final String TAG = "SelectCallerActivity";
+    private static final String TAG = SelectCallerActivity.class.getSimpleName();
+
+
+    public static final String EXTRA_USER_NAME = "com.icheyy.USERNAME";
+
+    private Toast logToast;
 
     private final static int VIDEO_CALL_SENT = 666;
     private static final String VIDEO_CODEC_VP9 = "VP9";
@@ -67,7 +74,8 @@ public class SelectCallerActivity extends Activity implements WebRTCClient.RtcLi
     private static final int REMOTE_Y = 0;
     private static final int REMOTE_WIDTH = 100;
     private static final int REMOTE_HEIGHT = 100;
-//    private VideoRendererGui.ScalingType scalingType = VideoRendererGui.ScalingType.SCALE_ASPECT_FILL;
+
+    //    private VideoRendererGui.ScalingType scalingType = VideoRendererGui.ScalingType.SCALE_ASPECT_FILL;
 
     private EditText mEtName;
     private EditText mEtCalleeName;
@@ -98,9 +106,8 @@ public class SelectCallerActivity extends Activity implements WebRTCClient.RtcLi
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-//        mSocketAddress = "https://" + "laravue.xyz";
-//        mSocketAddress = "http://192.168.6.54";
-        mSocketAddress = "https://call.icheyy.top";
+
+
 
         initViews();
 
@@ -124,9 +131,34 @@ public class SelectCallerActivity extends Activity implements WebRTCClient.RtcLi
 
         remoteRenderers.add(remoteProxyRenderer);
 
+
+
+        final Intent intent = getIntent();
+
+        // 获取server url
+        Uri serverUri = intent.getData();
+        if (serverUri == null) {
+            logAndToast(getString(R.string.missing_url));
+            Log.e(TAG, "Didn't get any URL in serverUri!");
+            setResult(RESULT_CANCELED);
+            finish();
+            return;
+        }
+        mSocketAddress = serverUri.toString();
+        Log.e(TAG, "onCreate: " +  mSocketAddress);
+
+        // Get Intent parameters. 取得用户名
+        String userName = intent.getStringExtra(EXTRA_USER_NAME);
+        Log.d(TAG, "user name is: " + userName);
+        if (userName == null || userName.length() == 0) {
+            logAndToast("用户名为空");
+            Log.e(TAG, "Incorrect user name in intent!");
+            setResult(RESULT_CANCELED);
+            finish();
+            return;
+        }
+
         init();
-
-
 //        vsv = (GLSurfaceView) findViewById(R.id.glview_call);
 //        vsv.setPreserveEGLContextOnPause(true);
 //        vsv.setKeepScreenOn(true);
@@ -266,6 +298,10 @@ public class SelectCallerActivity extends Activity implements WebRTCClient.RtcLi
             pcClient.onDestroy();
         }
         disconnect();
+        if (logToast != null) {
+            logToast.cancel();
+        }
+
         super.onDestroy();
     }
 
@@ -428,5 +464,15 @@ public class SelectCallerActivity extends Activity implements WebRTCClient.RtcLi
             e.printStackTrace();
         }
         return sslContext == null ? null : sslContext.getSocketFactory();
+    }
+
+
+    private void logAndToast(String msg) {
+        Log.d(TAG, msg);
+        if (logToast != null) {
+            logToast.cancel();
+        }
+        logToast = Toast.makeText(this, msg, Toast.LENGTH_SHORT);
+        logToast.show();
     }
 }
