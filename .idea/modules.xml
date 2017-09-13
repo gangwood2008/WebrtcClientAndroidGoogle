@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/WebRTCDemoIntranet.iml" filepath="$PROJECT_DIR$/WebRTCDemoIntranet.iml" />
+      <module fileurl="file://$PROJECT_DIR$/WebrtcClientAndroidGoogle.iml" filepath="$PROJECT_DIR$/WebrtcClientAndroidGoogle.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
     </modules>
   </component>
