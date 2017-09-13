@@ -6,7 +6,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
 
-import com.icheyy.webrtcdemo.WebRTCClient;
+import com.icheyy.webrtcdemo.bean.WebRTCClient;
 import com.inesadt.webrtcdemo.PeerConnectionParameters;
 
 import java.security.KeyManagementException;

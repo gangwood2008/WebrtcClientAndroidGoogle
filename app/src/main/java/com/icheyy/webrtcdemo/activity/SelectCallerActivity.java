@@ -11,14 +11,17 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.webkit.URLUtil;
-import android.widget.ArrayAdapter;
+import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.icheyy.webrtcdemo.R;
+import com.icheyy.webrtcdemo.adapter.CallersItemLvAdapter;
 import com.icheyy.webrtcdemo.base.BaseAppActivity;
+import com.icheyy.webrtcdemo.bean.Caller;
+import com.icheyy.webrtcdemo.bean.WebRTCClient;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -27,10 +30,11 @@ import org.webrtc.PeerConnection;
 import org.webrtc.VideoTrack;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 
 import static android.content.ContentValues.TAG;
 
-public class SelectCallerActivity extends BaseAppActivity implements View.OnClickListener  {
+public class SelectCallerActivity extends BaseAppActivity implements View.OnClickListener {
 
     private static final int CONNECTION_REQUEST = 1;
 
@@ -84,8 +88,8 @@ public class SelectCallerActivity extends BaseAppActivity implements View.OnClic
     private static final String VIDEO_CODEC_H264_HIGH = "H264 High";
     private static final String AUDIO_CODEC_OPUS = "opus";
 
-    private ArrayList<String> roomList;
-    private ArrayAdapter<String> adapter;
+    private ArrayList<Caller> mCallersList;
+    private BaseAdapter adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -107,9 +111,35 @@ public class SelectCallerActivity extends BaseAppActivity implements View.OnClic
             return;
         }
         if (validateUrl(p2pServerUrl)) {
-            Log.d(TAG, "init PeerConnection "  + " at URL " + p2pServerUrl);
+            Log.d(TAG, "init PeerConnection " + " at URL " + p2pServerUrl);
             initPeerConnection(p2pServerUrl, VIDEO_CODEC_VP9, AUDIO_CODEC_OPUS);
         }
+
+        pcClient.setSignallingListener(new WebRTCClient.RtcSignallingListener() {
+            @Override
+            public void onshow(JSONObject jsonAllUsers) {
+                try {
+                    Iterator<String> keys = jsonAllUsers.keys();
+                    while (keys.hasNext()) {
+                        String key = keys.next();
+                        Caller caller = new Caller(key, (Boolean) jsonAllUsers.get(key));
+                        mCallersList.add(caller);
+
+                    }
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            adapter.notifyDataSetChanged();
+                        }
+                    });
+
+
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+
+            }
+        });
 
     }
 
@@ -131,6 +161,10 @@ public class SelectCallerActivity extends BaseAppActivity implements View.OnClic
         bt_to_call.setOnClickListener(this);
         tv_user_name.setText(sharedPref.getString(
                 keyprefUserName, ""));
+
+        mCallersList = new ArrayList<>();
+        adapter = new CallersItemLvAdapter(this, mCallersList);
+        lv_callers_list.setAdapter(adapter);
 
     }
 
@@ -194,6 +228,7 @@ public class SelectCallerActivity extends BaseAppActivity implements View.OnClic
             finish();
         }
     }
+
     @Override
     public void onClick(View v) {
         int id = v.getId();
@@ -215,6 +250,7 @@ public class SelectCallerActivity extends BaseAppActivity implements View.OnClic
 
     /**
      * 跳转到选择被呼叫页面
+     *
      * @param useValuesFromIntent 是否从intent中读取参数
      * @param runTimeMs
      */
@@ -401,7 +437,6 @@ public class SelectCallerActivity extends BaseAppActivity implements View.OnClic
         Log.d(TAG, "Connecting to caller " + "" + " at URL " + p2pServerUrl.toString());
 
 
-
         if (validateUrl(p2pServerUrl)) {
             Uri uri = Uri.parse(p2pServerUrl);
             Intent intent = new Intent(SelectCallerActivity.this, CallActivity.class);
@@ -414,9 +449,10 @@ public class SelectCallerActivity extends BaseAppActivity implements View.OnClic
 
     /**
      * 取得attributeId的值
+     *
      * @param attributeId
-     * @param intentName  外部通过intent传入参数
-     * @param defaultId  字符串id，默认值
+     * @param intentName    外部通过intent传入参数
+     * @param defaultId     字符串id，默认值
      * @param useFromIntent 是否从外部intent中读取参数，true则从外部intent读取，false从sharedPref中读取
      * @return 值（字符串）
      */
@@ -441,9 +477,10 @@ public class SelectCallerActivity extends BaseAppActivity implements View.OnClic
      */
     /**
      * 取得attributeId的值
+     *
      * @param attributeId
-     * @param intentName  外部通过intent传入参数
-     * @param defaultId  字符串id，默认值
+     * @param intentName    外部通过intent传入参数
+     * @param defaultId     字符串id，默认值
      * @param useFromIntent 是否从外部intent中读取参数，true则从外部intent读取，false从sharedPref中读取
      * @return 值（布尔）
      */
@@ -464,9 +501,10 @@ public class SelectCallerActivity extends BaseAppActivity implements View.OnClic
      */
     /**
      * 取得attributeId的值
+     *
      * @param attributeId
-     * @param intentName  外部通过intent传入参数
-     * @param defaultId  字符串id，默认值
+     * @param intentName    外部通过intent传入参数
+     * @param defaultId     字符串id，默认值
      * @param useFromIntent 是否从外部intent中读取参数，true则从外部intent读取，false从sharedPref中读取
      * @return 值（int）
      */
@@ -487,7 +525,6 @@ public class SelectCallerActivity extends BaseAppActivity implements View.OnClic
             }
         }
     }
-
 
 
     /**
@@ -576,5 +613,5 @@ public class SelectCallerActivity extends BaseAppActivity implements View.OnClic
         pcClient.removeAllPeers();
         pcClient.addPeer(name, 0);
     }
-    
+
 }

@@ -1,4 +1,4 @@
-package com.icheyy.webrtcdemo;
+package com.icheyy.webrtcdemo.bean;
 
 import android.app.AlertDialog;
 import android.content.Context;
@@ -9,7 +9,6 @@ import android.util.Log;
 import android.widget.Toast;
 
 import com.icheyy.webrtcdemo.activity.CallActivity;
-import com.icheyy.webrtcdemo.bean.Peer;
 import com.inesadt.webrtcdemo.PeerConnectionParameters;
 
 import org.json.JSONException;
@@ -50,6 +49,7 @@ public class WebRTCClient {
     private MediaStream localMS;
     private VideoSource videoSource;
     private RtcListener mListener;
+    private RtcSignallingListener mSignallingListener;
     private io.socket.client.Socket mSocket;
     private String mSelfId, mConnectedId;
     private VideoCapturer videoCapturer;
@@ -67,6 +67,16 @@ public class WebRTCClient {
         void onAddRemoteStream(MediaStream remoteStream, int endPoint);
 
         void onRemoveRemoteStream(int endPoint);
+    }
+
+    public interface RtcSignallingListener {
+        void onshow(JSONObject jsonAllUsers);
+
+
+    }
+
+    public void setSignallingListener(RtcSignallingListener signallingListener) {
+        mSignallingListener = signallingListener;
     }
 
     public void sendMessage(String msg) {
@@ -372,6 +382,9 @@ public class WebRTCClient {
 
     private void handleShow(JSONObject data) throws JSONException {
         JSONObject allUsers = data.getJSONObject("allUsers");
+        if(mSignallingListener != null) {
+            mSignallingListener.onshow(allUsers);
+        }
         Iterator<String> keys = allUsers.keys();
         if (mAllUsers == null) {
             mAllUsers = new HashMap<>();

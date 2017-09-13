@@ -11,7 +11,7 @@ import android.widget.Toast;
 
 import com.icheyy.webrtcdemo.ProxyRenderer;
 import com.icheyy.webrtcdemo.R;
-import com.icheyy.webrtcdemo.WebRTCClient;
+import com.icheyy.webrtcdemo.bean.WebRTCClient;
 import com.icheyy.webrtcdemo.base.BaseAppActivity;
 
 import org.json.JSONException;
