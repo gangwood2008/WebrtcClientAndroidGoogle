@@ -45,9 +45,9 @@ import okhttp3.OkHttpClient;
 
 //import org.webrtc.VideoRendererGui;
 
-public class MainActivity extends Activity implements WebRTCClient.RtcListener {
+public class SelectCallerActivity extends Activity implements WebRTCClient.RtcListener {
 
-    private static final String TAG = "MainActivity";
+    private static final String TAG = "SelectCallerActivity";
 
     private final static int VIDEO_CALL_SENT = 666;
     private static final String VIDEO_CODEC_VP9 = "VP9";
@@ -278,7 +278,7 @@ public class MainActivity extends Activity implements WebRTCClient.RtcListener {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        Toast.makeText(MainActivity.this, id + " DISCONNECTED", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(SelectCallerActivity.this, id + " DISCONNECTED", Toast.LENGTH_SHORT).show();
                     }
                 });
                 if (!isSwappedFeeds) setSwappedFeeds(true);

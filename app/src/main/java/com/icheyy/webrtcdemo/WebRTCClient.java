@@ -269,7 +269,7 @@ public class WebRTCClient {
         peers.clear();
     }
 
-    private Handler mHandler = MainActivity.mHandler;
+    private Handler mHandler = SelectCallerActivity.mHandler;
     private Context mContext;
 
     private static final String VIDEO_CODEC_VP8 = "VP8";
