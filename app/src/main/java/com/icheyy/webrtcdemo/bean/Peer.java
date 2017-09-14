@@ -41,6 +41,7 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
 
     private io.socket.client.Socket mSocket;
     private PeerObserver mObserver;
+    private WebRTCClient.RtcListener mRtcListener;
 
     public interface PeerObserver {
         /**
@@ -57,6 +58,10 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
         this.endPoint = endPoint;
         mSocket = socket;
         mObserver = observer;
+    }
+
+    public void setRTCListener(WebRTCClient.RtcListener listener) {
+        mRtcListener = listener;
     }
 
     public void setStream(MediaStream ms) {
@@ -135,10 +140,9 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
         if (iceConnectionState == PeerConnection.IceConnectionState.DISCONNECTED && mObserver != null) {
             mObserver.onRemove(mId);
         }
-        //TODO
-        //                if (mListener != null) {
-        //                    mListener.onStatusChanged(mId, iceConnectionState);
-        //                }
+                        if (mRtcListener != null) {
+                            mRtcListener.onStatusChanged(mId, iceConnectionState);
+                        }
     }
 
     @Override
@@ -185,8 +189,7 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
         Log.d(TAG, "onAddStream " + mediaStream.label());
 
         if (mediaStream.videoTracks.size() == 1) {
-            //TODO
-            //            mListener.onAddRemoteStream(mediaStream, endPoint + 1);
+            mRtcListener.onAddRemoteStream(mediaStream, endPoint + 1);
         }
 
         //            // remote streams are displayed from 1 to MAX_PEER (0 is localStream)

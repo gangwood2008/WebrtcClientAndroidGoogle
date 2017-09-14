@@ -65,6 +65,7 @@ public class WebRTCClient {
     private RtcListener mListener;
     private RtcSignallingListener mSignallingListener;
 
+
     /**
      * Implement this interface to be notified of events.
      */
@@ -426,6 +427,7 @@ public class WebRTCClient {
                 }
             });
         }
+        getSelfPeer().setRTCListener(mListener);
     }
 
     private void handleCall(JSONObject data) throws JSONException {
@@ -484,7 +486,8 @@ public class WebRTCClient {
                 mPM.addPeer(mConnectedId, 1, localMS, pcConstraints, mSocket);
             }
             Peer peer = mPM.getPeer(mConnectedId);
-            peer.setCallerId(mSelfId);
+            peer.setRTCListener(mListener);
+            peer.setCallerId(mConnectedId);
             Log.i(TAG, "handleAccept: mConnectedId:: " + mConnectedId);
             Log.d(TAG, "handleAccept: peer:: " + peer);
             Log.d(TAG, "handleAccept: peerConn:: " + peer.getPeerConnection());
