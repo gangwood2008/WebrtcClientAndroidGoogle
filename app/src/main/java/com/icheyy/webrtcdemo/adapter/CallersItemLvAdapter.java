@@ -39,13 +39,13 @@ public class CallersItemLvAdapter extends BaseAdapter {
 
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
-        DetailsHolder holder = null;
+        CallerItemHolder holder = null;
         if (convertView == null) {
             convertView = LayoutInflater.from(mActivity).inflate(R.layout.item_callers_list, null);
-            holder = new DetailsHolder(convertView);
+            holder = new CallerItemHolder(convertView);
             convertView.setTag(holder);
         } else {
-            holder = (DetailsHolder) convertView.getTag();
+            holder = (CallerItemHolder) convertView.getTag();
         }
 
         Caller caller = mContentList.get(position);
@@ -59,11 +59,11 @@ public class CallersItemLvAdapter extends BaseAdapter {
     }
 
 
-    class DetailsHolder {
+    class CallerItemHolder {
         private TextView tv_caller_name;
         private TextView tv_caller_status;
 
-        public DetailsHolder(View itemView) {
+        public CallerItemHolder(View itemView) {
             tv_caller_name = (TextView) itemView.findViewById(R.id.tv_caller_name);
             tv_caller_status = (TextView) itemView.findViewById(R.id.tv_caller_status);
         }

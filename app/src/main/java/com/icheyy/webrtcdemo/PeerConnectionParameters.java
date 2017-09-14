@@ -1,4 +1,4 @@
-package com.inesadt.webrtcdemo;
+package com.icheyy.webrtcdemo;
 
 public class PeerConnectionParameters {
     public final boolean videoCallEnabled;

@@ -6,8 +6,8 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.icheyy.webrtcdemo.PeerConnectionParameters;
 import com.icheyy.webrtcdemo.bean.WebRTCClient;
-import com.inesadt.webrtcdemo.PeerConnectionParameters;
 
 import java.security.KeyManagementException;
 import java.security.KeyStore;
@@ -27,12 +27,12 @@ import javax.net.ssl.X509TrustManager;
 import io.socket.client.IO;
 import okhttp3.OkHttpClient;
 
-public abstract class BaseAppActivity extends Activity implements WebRTCClient.RtcListener {
+public abstract class BaseAppActivity extends Activity {
 
     private static final String TAG = BaseAppActivity.class.getSimpleName();
 
     private Toast logToast;
-    protected WebRTCClient pcClient;
+    protected static WebRTCClient pcClient;
 
 
     @Override
@@ -66,14 +66,14 @@ public abstract class BaseAppActivity extends Activity implements WebRTCClient.R
         super.onDestroy();
     }
 
-    protected void initPeerConnection(String serverUrl, String videoCodec, String audioCodec) {
+    protected void initPeerConnection(String serverUrl, WebRTCClient.RtcSignallingListener signallingListener, String videoCodec, String audioCodec) {
         Point displaySize = new Point();
         getWindowManager().getDefaultDisplay().getSize(displaySize);
         Log.d(TAG, "init: displaySize:: x -> " + displaySize.x + ", y -> " + displaySize.y);
         PeerConnectionParameters pcParams = new PeerConnectionParameters(
                 true, false, displaySize.x, displaySize.y, 30, 1, videoCodec, true, 1, audioCodec, true);
 
-        pcClient = new WebRTCClient(this, serverUrl, getIOOptions(), pcParams, /*VideoRendererGui.getEGLContext(),*/ this);
+        pcClient = new WebRTCClient(null,signallingListener, serverUrl, getIOOptions(), pcParams,  this);
     }
 
     private IO.Options getIOOptions() {

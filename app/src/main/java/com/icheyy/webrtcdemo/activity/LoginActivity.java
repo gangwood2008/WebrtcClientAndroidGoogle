@@ -14,10 +14,6 @@ import android.widget.TextView;
 import com.icheyy.webrtcdemo.R;
 import com.icheyy.webrtcdemo.base.BaseAppActivity;
 
-import org.webrtc.MediaStream;
-import org.webrtc.PeerConnection;
-import org.webrtc.VideoTrack;
-
 public class LoginActivity extends BaseAppActivity {
 
     private static final int CONNECTION_REQUEST = 1;
@@ -118,28 +114,5 @@ public class LoginActivity extends BaseAppActivity {
     }
 
 
-    @Override
-    public void onConnectSocketFinish(boolean result) {
 
-    }
-
-    @Override
-    public void onStatusChanged(String id, PeerConnection.IceConnectionState iceConnectionState) {
-
-    }
-
-    @Override
-    public void onLocalStream(MediaStream localStream, VideoTrack track) {
-
-    }
-
-    @Override
-    public void onAddRemoteStream(MediaStream remoteStream, int endPoint) {
-
-    }
-
-    @Override
-    public void onRemoveRemoteStream(int endPoint) {
-
-    }
 }

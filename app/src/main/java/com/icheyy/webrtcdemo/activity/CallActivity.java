@@ -5,14 +5,13 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.text.TextUtils;
 import android.util.Log;
-import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
 
 import com.icheyy.webrtcdemo.ProxyRenderer;
 import com.icheyy.webrtcdemo.R;
-import com.icheyy.webrtcdemo.bean.WebRTCClient;
 import com.icheyy.webrtcdemo.base.BaseAppActivity;
+import com.icheyy.webrtcdemo.bean.WebRTCClient;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -47,12 +46,13 @@ import okhttp3.OkHttpClient;
 
 //import org.webrtc.VideoRendererGui;
 
-public class CallActivity extends BaseAppActivity implements WebRTCClient.RtcListener {
+public class CallActivity extends BaseAppActivity {
 
     private static final String TAG = CallActivity.class.getSimpleName();
 
 
-    public static final String EXTRA_USER_NAME = "com.icheyy.webrtc.USERNAME";
+    public static final String EXTRA_USER_NAME = "com.icheyy.webrtc.USER_NAME";
+    public static final String EXTRA_CALLER_NAME = "com.icheyy.webrtc.CALLER_NAME";
     public static final String EXTRA_VIDEO_CALL = "com.icheyy.webrtc.VIDEO_CALL";
     public static final String EXTRA_SCREENCAPTURE = "com.icheyy.webrtc.SCREENCAPTURE";
     public static final String EXTRA_CAMERA2 = "com.icheyy.webrtc.CAMERA2";
@@ -110,6 +110,7 @@ public class CallActivity extends BaseAppActivity implements WebRTCClient.RtcLis
 
 
     private final static int VIDEO_CALL_SENT = 666;
+    private static final String VIDEO_CODEC_VP8 = "VP8";
     private static final String VIDEO_CODEC_VP9 = "VP9";
     private static final String AUDIO_CODEC_OPUS = "opus";
     // Local preview screen position before call is connected.
@@ -138,7 +139,6 @@ public class CallActivity extends BaseAppActivity implements WebRTCClient.RtcLis
 
     public static Handler mHandler = new Handler();
     private String mSocketAddress;
-    private WebRTCClient pcClient;
 
     //==========================================
     private SurfaceViewRenderer pipRenderer;
@@ -159,47 +159,24 @@ public class CallActivity extends BaseAppActivity implements WebRTCClient.RtcLis
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-
-
-
         initViews();
-
-
-        pipRenderer = (SurfaceViewRenderer) findViewById(R.id.pip_video_view);
-        fullscreenRenderer = (SurfaceViewRenderer) findViewById(R.id.fullscreen_video_view);
-        remoteRenderers.add(remoteProxyRenderer);
-
-        // Create video renderers.
-        rootEglBase = EglBase.create();
-        pipRenderer.init(rootEglBase.getEglBaseContext(), null);
-        pipRenderer.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT);
-
-        fullscreenRenderer.init(rootEglBase.getEglBaseContext(), null);
-        fullscreenRenderer.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FILL);
-
-        pipRenderer.setZOrderMediaOverlay(true);
-        pipRenderer.setEnableHardwareScaler(true /* enabled */);
-        fullscreenRenderer.setEnableHardwareScaler(true /* enabled */);
-        setSwappedFeeds(true /* isSwappedFeeds */);
-
-        remoteRenderers.add(remoteProxyRenderer);
-
-
 
         final Intent intent = getIntent();
 
-
-
         // Get Intent parameters. 取得用户名
-        String userName = intent.getStringExtra(EXTRA_USER_NAME);
-        Log.d(TAG, "user name is: " + userName);
-        if (userName == null || userName.length() == 0) {
-            logAndToast("用户名为空");
-            Log.e(TAG, "Incorrect user name in intent!");
-            setResult(RESULT_CANCELED);
-            finish();
-            return;
-        }
+//        String userName = intent.getStringExtra(EXTRA_USER_NAME);
+//        Log.d(TAG, "user name is: " + userName);
+//        if (userName == null || userName.length() == 0) {
+//            logAndToast("用户名为空");
+//            Log.e(TAG, "Incorrect user name in intent!");
+//            setResult(RESULT_CANCELED);
+//            finish();
+//            return;
+//        }
+        pcClient.setListener(mRtcListener);
+        startCam();
+        toCall();
+
 
 //        init();
 //        vsv = (GLSurfaceView) findViewById(R.id.glview_call);
@@ -223,6 +200,8 @@ public class CallActivity extends BaseAppActivity implements WebRTCClient.RtcLis
 
     }
 
+
+
     private void setSwappedFeeds(boolean isSwappedFeeds) {
         Logging.d(TAG, "setSwappedFeeds: " + isSwappedFeeds);
         this.isSwappedFeeds = isSwappedFeeds;
@@ -232,64 +211,58 @@ public class CallActivity extends BaseAppActivity implements WebRTCClient.RtcLis
         pipRenderer.setMirror(!isSwappedFeeds);
     }
 
-    private static final String VIDEO_CODEC_VP8 = "VP8";
 
 
 
     private void initViews() {
-        mEtName = (EditText) findViewById(R.id.et_name);
-        mEtCalleeName = (EditText) findViewById(R.id.et_calleeName);
+        pipRenderer = (SurfaceViewRenderer) findViewById(R.id.pip_video_view);
+        fullscreenRenderer = (SurfaceViewRenderer) findViewById(R.id.fullscreen_video_view);
+        remoteRenderers.add(remoteProxyRenderer);
+
+        // Create video renderers.
+        rootEglBase = EglBase.create();
+        pipRenderer.init(rootEglBase.getEglBaseContext(), null);
+        pipRenderer.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT);
+
+        fullscreenRenderer.init(rootEglBase.getEglBaseContext(), null);
+        fullscreenRenderer.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FILL);
+
+        pipRenderer.setZOrderMediaOverlay(true);
+        pipRenderer.setEnableHardwareScaler(true /* enabled */);
+        fullscreenRenderer.setEnableHardwareScaler(true /* enabled */);
+        setSwappedFeeds(true /* isSwappedFeeds */);
+
+        remoteRenderers.add(remoteProxyRenderer);
     }
 
-    public void click2Join(View view) {
-        Log.i(TAG, "click2Join: ====================");
-        String name = mEtName.getText().toString();
-        Log.d(TAG, "click2Join: name:: " + name);
-        if (TextUtils.isEmpty(name)) {
-            Log.e(TAG, "click2Join: Ooops...this username cannot be empty, please try again");
-            return;
-        }
-        pcClient.setSelfId(name);
 
-        JSONObject msg = new JSONObject();
-        try {
-            msg.put("event", "join");
-            msg.put("name", name);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        pcClient.sendMessage(msg);
-        pcClient.removeAllPeers();
-        startCam();
-        pcClient.addPeer(name, 0);
-    }
-
-    public void click2Call(View view) {
-        Log.d(TAG, "click2Call: ====================");
-        String calleeName = mEtCalleeName.getText().toString();
-        Log.d(TAG, "click2Call: calleeName:: " + calleeName);
-        pcClient.setConnectedId(calleeName);
-        if (TextUtils.isEmpty(calleeName)) {
-            Log.e(TAG, "click2Call: Ooops...this username cannot be empty, please try again");
+    public void toCall() {
+        Log.d(TAG, "toCall: ====================");
+        // Get Intent parameters. 取得用户名
+        final Intent intent = getIntent();
+        String callerName = intent.getStringExtra(EXTRA_CALLER_NAME);
+        Log.d(TAG, "toCall: calleeName:: " + callerName);
+        if (TextUtils.isEmpty(callerName)) {
+            Log.e(TAG, "toCall: Ooops...this username cannot be empty, please try again");
         }
 
         JSONObject msg = new JSONObject();
         try {
             msg.put("event", "call");
-            msg.put("connectedUser", calleeName);
+            msg.put("connectedUser", callerName);
         } catch (JSONException e) {
             e.printStackTrace();
         }
-        pcClient.sendMessage(msg);
-        pcClient.addPeer(calleeName, 1);
+        pcClient.getSelfPeer().sendMessage(msg);
+//        pcClient.setConnectedId(callerName);
+        pcClient.getSelfPeer().setCallerId(callerName);
+        //TODO
+//        pcClient.addPeer(calleeName, 1);
     }
 
-    public void startCam() {
-        // Camera settings
-        pcClient.start("android_test", rootEglBase.getEglBaseContext());
-    }
 
-    public void click2HangUp(View view) {
+
+    public void toHangUp() {
         Log.d(TAG, "click2HangUp: ====================");
         JSONObject msg = new JSONObject();
         try {
@@ -298,7 +271,7 @@ public class CallActivity extends BaseAppActivity implements WebRTCClient.RtcLis
         } catch (JSONException e) {
             e.printStackTrace();
         }
-        pcClient.sendMessage(msg);
+        pcClient.getSelfPeer().sendMessage(msg);
         if (!isSwappedFeeds) setSwappedFeeds(true);
         pcClient.handleLeave();
     }
@@ -317,6 +290,8 @@ public class CallActivity extends BaseAppActivity implements WebRTCClient.RtcLis
         if (pcClient != null) {
             pcClient.onResume();
         }
+        pcClient.setListener(mRtcListener);
+
     }
 
     @Override
@@ -329,90 +304,104 @@ public class CallActivity extends BaseAppActivity implements WebRTCClient.RtcLis
 
     @Override
     public void onDestroy() {
+        toHangUp();
+
         if (pcClient != null) {
             pcClient.onDestroy();
         }
         disconnect();
-
-
         super.onDestroy();
     }
 
-    @Override
-    public void onConnectSocketFinish(boolean result) {
 
+    public void startCam() {
+        // Camera settings
+        pcClient.start(rootEglBase.getEglBaseContext());
     }
 
-    @Override
-    public void onStatusChanged(final String id, PeerConnection.IceConnectionState iceConnectionState) {
-        Log.d(TAG, "onStatusChanged: id:: " + id + ", " + iceConnectionState);
-        switch (iceConnectionState) {
-            case DISCONNECTED:
-            case CLOSED:
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Toast.makeText(CallActivity.this, id + " DISCONNECTED", Toast.LENGTH_SHORT).show();
-                    }
-                });
-                if (!isSwappedFeeds) setSwappedFeeds(true);
-                pipRenderer.clearImage();
-                mRemoteVideoTrack = null;
-                remoteProxyRenderer.setTarget(null);
-                break;
-        }
-    }
+    private WebRTCClient.RtcListener mRtcListener = new WebRTCClient.RtcListener() {
 
-    @Override
-    public void onLocalStream(MediaStream localStream, VideoTrack track) {
-        Log.d(TAG, "onLocalStream localStream.videoTracks:: " + localStream.videoTracks);
-        Log.d(TAG, "onLocalStream localProxyRenderer:: " + localProxyRenderer);
-        if (localStream.videoTracks == null) return;
-        if (track == null) return;
-        track.addRenderer(new VideoRenderer(localProxyRenderer));
+        @Override
+        public void onConnectSocketFinish(boolean result) {
 
-//        localStream.videoTracks.get(0).addRenderer(new VideoRenderer(localRender));
-//        VideoRendererGui.update(localRender,
-//                LOCAL_X_CONNECTING, LOCAL_Y_CONNECTING,
-//                LOCAL_WIDTH_CONNECTING, LOCAL_HEIGHT_CONNECTING,
-//                scalingType);
-    }
-
-    @Override
-    public void onAddRemoteStream(MediaStream remoteStream, int endPoint) {
-        Log.d(TAG, "onAddRemoteStream");
-        if (isSwappedFeeds) setSwappedFeeds(false);
-
-        mRemoteVideoTrack = remoteStream.videoTracks.get(0);
-        mRemoteVideoTrack.setEnabled(true);
-        for (VideoRenderer.Callbacks remoteRender : remoteRenderers) {
-            mRemoteVideoTrack.addRenderer(new VideoRenderer(remoteRender));
         }
 
-//        remoteStream.videoTracks.get(0).addRenderer(new VideoRenderer(remoteRender));
-//        VideoRendererGui.update(remoteRender,
-//                REMOTE_X, REMOTE_Y,
-//                REMOTE_WIDTH, REMOTE_HEIGHT, scalingType);
-//        VideoRendererGui.update(localRender,
-//                LOCAL_X_CONNECTED, LOCAL_Y_CONNECTED,
-//                LOCAL_WIDTH_CONNECTED, LOCAL_HEIGHT_CONNECTED,
-//                scalingType);
-    }
+        @Override
+        public void onStatusChanged(final String id, PeerConnection.IceConnectionState iceConnectionState) {
+            Log.d(TAG, "onStatusChanged: id:: " + id + ", " + iceConnectionState);
+            switch (iceConnectionState) {
+                case DISCONNECTED:
+                case CLOSED:
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(CallActivity.this, id + " DISCONNECTED", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                    if (!isSwappedFeeds)
+                        setSwappedFeeds(true);
+                    pipRenderer.clearImage();
+                    mRemoteVideoTrack = null;
+                    remoteProxyRenderer.setTarget(null);
+                    break;
+            }
+        }
 
-    @Override
-    public void onRemoveRemoteStream(int endPoint) {
-        Log.d(TAG, "onRemoveRemoteStream");
+        @Override
+        public void onLocalStream(MediaStream localStream, VideoTrack track) {
+            Log.d(TAG, "onLocalStream localStream.videoTracks:: " + localStream.videoTracks);
+            Log.d(TAG, "onLocalStream localProxyRenderer:: " + localProxyRenderer);
+            if (localStream.videoTracks == null)
+                return;
+            if (track == null)
+                return;
+            track.addRenderer(new VideoRenderer(localProxyRenderer));
 
-        if (!isSwappedFeeds) setSwappedFeeds(true);
-        pipRenderer.clearImage();
-        mRemoteVideoTrack = null;
-        remoteProxyRenderer.setTarget(null);
+            //        localStream.videoTracks.get(0).addRenderer(new VideoRenderer(localRender));
+            //        VideoRendererGui.update(localRender,
+            //                LOCAL_X_CONNECTING, LOCAL_Y_CONNECTING,
+            //                LOCAL_WIDTH_CONNECTING, LOCAL_HEIGHT_CONNECTING,
+            //                scalingType);
+        }
 
-//        VideoRendererGui.update(localRender,
-//                LOCAL_X_CONNECTING, LOCAL_Y_CONNECTING,
-//                LOCAL_WIDTH_CONNECTING, LOCAL_HEIGHT_CONNECTING,
-//                scalingType);
-    }
+        @Override
+        public void onAddRemoteStream(MediaStream remoteStream, int endPoint) {
+            Log.d(TAG, "onAddRemoteStream");
+            if (isSwappedFeeds)
+                setSwappedFeeds(false);
+
+            mRemoteVideoTrack = remoteStream.videoTracks.get(0);
+            mRemoteVideoTrack.setEnabled(true);
+            for (VideoRenderer.Callbacks remoteRender : remoteRenderers) {
+                mRemoteVideoTrack.addRenderer(new VideoRenderer(remoteRender));
+            }
+
+            //        remoteStream.videoTracks.get(0).addRenderer(new VideoRenderer(remoteRender));
+            //        VideoRendererGui.update(remoteRender,
+            //                REMOTE_X, REMOTE_Y,
+            //                REMOTE_WIDTH, REMOTE_HEIGHT, scalingType);
+            //        VideoRendererGui.update(localRender,
+            //                LOCAL_X_CONNECTED, LOCAL_Y_CONNECTED,
+            //                LOCAL_WIDTH_CONNECTED, LOCAL_HEIGHT_CONNECTED,
+            //                scalingType);
+        }
+
+        @Override
+        public void onRemoveRemoteStream(int endPoint) {
+            Log.d(TAG, "onRemoveRemoteStream");
+
+            if (!isSwappedFeeds)
+                setSwappedFeeds(true);
+            pipRenderer.clearImage();
+            mRemoteVideoTrack = null;
+            remoteProxyRenderer.setTarget(null);
+
+            //        VideoRendererGui.update(localRender,
+            //                LOCAL_X_CONNECTING, LOCAL_Y_CONNECTING,
+            //                LOCAL_WIDTH_CONNECTING, LOCAL_HEIGHT_CONNECTING,
+            //                scalingType);
+        }
+    };
 
     // Disconnect from remote resources, dispose of local resources, and exit.
     private void disconnect() {

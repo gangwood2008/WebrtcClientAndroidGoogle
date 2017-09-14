@@ -7,10 +7,10 @@ import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
-import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.webkit.URLUtil;
+import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.ListView;
@@ -112,34 +112,40 @@ public class SelectCallerActivity extends BaseAppActivity implements View.OnClic
         }
         if (validateUrl(p2pServerUrl)) {
             Log.d(TAG, "init PeerConnection " + " at URL " + p2pServerUrl);
-            initPeerConnection(p2pServerUrl, VIDEO_CODEC_VP9, AUDIO_CODEC_OPUS);
+            WebRTCClient.RtcSignallingListener signListener = new WebRTCClient.RtcSignallingListener() {
+                @Override
+                public void onshow(JSONObject jsonAllUsers) {
+                    Log.d(TAG, "onshow: " + jsonAllUsers);
+                    try {
+                        Iterator<String> keys = jsonAllUsers.keys();
+                        while (keys.hasNext()) {
+                            String key = keys.next();
+                            Caller caller = new Caller(key, (Boolean) jsonAllUsers.get(key));
+                            mCallersList.add(caller);
+                            Log.d(TAG, "CallersList add " + caller);
+
+                        }
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                adapter.notifyDataSetChanged();
+                            }
+                        });
+
+
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+
+                }
+            };
+            initPeerConnection (p2pServerUrl, signListener ,VIDEO_CODEC_VP9, AUDIO_CODEC_OPUS);
+            return;
         }
 
-        pcClient.setSignallingListener(new WebRTCClient.RtcSignallingListener() {
-            @Override
-            public void onshow(JSONObject jsonAllUsers) {
-                try {
-                    Iterator<String> keys = jsonAllUsers.keys();
-                    while (keys.hasNext()) {
-                        String key = keys.next();
-                        Caller caller = new Caller(key, (Boolean) jsonAllUsers.get(key));
-                        mCallersList.add(caller);
-
-                    }
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            adapter.notifyDataSetChanged();
-                        }
-                    });
 
 
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-
-            }
-        });
+        pcClient.setListener(mRtcListener);
 
     }
 
@@ -165,6 +171,16 @@ public class SelectCallerActivity extends BaseAppActivity implements View.OnClic
         mCallersList = new ArrayList<>();
         adapter = new CallersItemLvAdapter(this, mCallersList);
         lv_callers_list.setAdapter(adapter);
+        lv_callers_list.setEmptyView(findViewById(R.id.empty));
+        lv_callers_list.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                Caller caller = mCallersList.get(position);
+                if(caller.getStatus()) {
+                    tv_caller_name.setText("你选择的被呼叫方是：" + caller.getName());
+                }
+            }
+        });
 
     }
 
@@ -206,6 +222,13 @@ public class SelectCallerActivity extends BaseAppActivity implements View.OnClic
         keyprefDataProtocol = getString(R.string.pref_data_protocol_key);
         keyprefNegotiated = getString(R.string.pref_negotiated_key);
         keyprefDataId = getString(R.string.pref_data_id_key);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        pcClient.setListener(mRtcListener);
+
     }
 
     @Override
@@ -263,6 +286,8 @@ public class SelectCallerActivity extends BaseAppActivity implements View.OnClic
                 keyprefP2PServerUrl, getString(R.string.pref_p2p_server_url_default));
         String userName = sharedPref.getString(
                 keyprefUserName, "");
+        Log.e(TAG, "goToCall: "+ tv_caller_name.getText().toString().split("：")[1]);
+        String callerName = tv_caller_name.getText().toString().split("：")[1];
 
         // Video call enabled flag.
         boolean videoCallEnabled = sharedPrefGetBoolean(R.string.pref_videocall_key,
@@ -444,6 +469,7 @@ public class SelectCallerActivity extends BaseAppActivity implements View.OnClic
             Intent intent = new Intent(SelectCallerActivity.this, CallActivity.class);
             intent.setData(uri);
             intent.putExtra(CallActivity.EXTRA_USER_NAME, userName);
+            intent.putExtra(CallActivity.EXTRA_CALLER_NAME, callerName);
 
             startActivityForResult(intent, CONNECTION_REQUEST);
         }
@@ -557,63 +583,50 @@ public class SelectCallerActivity extends BaseAppActivity implements View.OnClic
     }
 
 
-    @Override
-    public void onConnectSocketFinish(boolean result) {
-        Toast.makeText(this, "Socket connect: " + result, Toast.LENGTH_SHORT).show();
-        toJoin();
-    }
-
-    @Override
-    public void onStatusChanged(final String id, PeerConnection.IceConnectionState iceConnectionState) {
-        Log.d(TAG, "onStatusChanged: id:: " + id + ", " + iceConnectionState);
-        switch (iceConnectionState) {
-            case DISCONNECTED:
-            case CLOSED:
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Toast.makeText(SelectCallerActivity.this, id + " DISCONNECTED", Toast.LENGTH_SHORT).show();
-                    }
-                });
-                break;
+    private WebRTCClient.RtcListener mRtcListener = new WebRTCClient.RtcListener() {
+        @Override
+        public void onConnectSocketFinish(boolean result) {
+            Toast.makeText(SelectCallerActivity.this, "Socket connect: " + result, Toast.LENGTH_SHORT).show();
+            toJoin();
         }
-    }
 
-    @Override
-    public void onLocalStream(MediaStream localStream, VideoTrack track) {
+        @Override
+        public void onStatusChanged(final String id, PeerConnection.IceConnectionState iceConnectionState) {
+            Log.d(TAG, "onStatusChanged: id:: " + id + ", " + iceConnectionState);
+            switch (iceConnectionState) {
+                case DISCONNECTED:
+                case CLOSED:
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(SelectCallerActivity.this, id + " DISCONNECTED", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                    break;
+            }
+        }
 
-    }
+        @Override
+        public void onLocalStream(MediaStream localStream, VideoTrack track) {
 
-    @Override
-    public void onAddRemoteStream(MediaStream remoteStream, int endPoint) {
+        }
 
-    }
+        @Override
+        public void onAddRemoteStream(MediaStream remoteStream, int endPoint) {
 
-    @Override
-    public void onRemoveRemoteStream(int endPoint) {
+        }
 
-    }
+        @Override
+        public void onRemoveRemoteStream(int endPoint) {
+
+        }
+    };
+
 
     private void toJoin() {
-        Log.i(TAG, "toJoin: ====================");
         String name = tv_user_name.getText().toString();
-        Log.d(TAG, "toJoin: name:: " + name);
-        if (TextUtils.isEmpty(name)) {
-            Log.e(TAG, "toJoin: Ooops...this username cannot be empty, please try again");
-            return;
-        }
-        pcClient.setSelfId(name);
+        pcClient.toJoin(name);
 
-        JSONObject msg = new JSONObject();
-        try {
-            msg.put("event", "join");
-            msg.put("name", name);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        pcClient.sendMessage(msg);
-        pcClient.removeAllPeers();
-        pcClient.addPeer(name, 0);
     }
 
   
