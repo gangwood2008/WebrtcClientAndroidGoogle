@@ -249,8 +249,8 @@ public class SelectCallerActivity extends BaseAppActivity implements View.OnClic
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == CONNECTION_REQUEST) {
             Log.d(TAG, "Return: " + resultCode);
-            setResult(resultCode);
-            finish();
+//            setResult(resultCode);
+//            finish();
         }
     }
 

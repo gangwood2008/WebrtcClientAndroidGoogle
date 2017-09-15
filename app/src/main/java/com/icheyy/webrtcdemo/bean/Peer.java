@@ -13,7 +13,6 @@ import org.webrtc.SdpObserver;
 import org.webrtc.SessionDescription;
 
 
-
 /**
  * Created by Dell on 2017/9/13.
  */
@@ -40,24 +39,29 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
     private int endPoint;
 
     private io.socket.client.Socket mSocket;
-    private PeerObserver mObserver;
+
+//    public void setObserver(PeerObserver observer) {
+//        mObserver = observer;
+//    }
+
+//    private PeerObserver mObserver;
     private WebRTCClient.RtcListener mRtcListener;
 
     public interface PeerObserver {
         /**
          * 本peer需要移除
+         *
          * @param id
          */
         void onRemove(String id);
     }
 
-    public Peer(String id, int endPoint, io.socket.client.Socket socket, PeerObserver observer) {
+    public Peer(String id, int endPoint, io.socket.client.Socket socket) {
         Log.d(TAG, "new Peer: " + id + " " + endPoint);
 
         this.mId = id;
         this.endPoint = endPoint;
         mSocket = socket;
-        mObserver = observer;
     }
 
     public void setRTCListener(WebRTCClient.RtcListener listener) {
@@ -75,9 +79,17 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
         this.mConnection = pc;
     }
 
-    public void close() {
-        mConnection.dispose();
-        mConnection.close();
+    public void dispose() {
+        Log.d(TAG, "dispose: " + mId);
+        if(mRtcListener != null) {
+            mRtcListener.onRemoveRemoteStream(endPoint);
+            mRtcListener = null;
+        }
+        if (mConnection != null) {
+            mConnection.dispose();
+            mConnection = null;
+        }
+        //        mConnection.dispose();
     }
 
 
@@ -101,7 +113,7 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
 
             JSONObject msg = new JSONObject();
             msg.put("event", sdp.type.canonicalForm());
-            msg.put("connectedUser", mCallerId);
+            msg.put("connectedUser", mId);
             msg.put(sdp.type.canonicalForm(), payload);
             sendMessage(msg);
             mConnection.setLocalDescription(this, sdp);
@@ -137,12 +149,13 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
         Log.i(TAG, "onIceConnectionChange: mId:: " + mId);
         Log.d(TAG, "onIceConnectionChange: " + iceConnectionState);
 
-        if (iceConnectionState == PeerConnection.IceConnectionState.DISCONNECTED && mObserver != null) {
-            mObserver.onRemove(mId);
+        if (iceConnectionState == PeerConnection.IceConnectionState.DISCONNECTED ) {
+//            mObserver.onRemove(mId);
+            mRtcListener.onRemoveRemoteStream(endPoint);
         }
-                        if (mRtcListener != null) {
-                            mRtcListener.onStatusChanged(mId, iceConnectionState);
-                        }
+        if (mRtcListener != null) {
+            mRtcListener.onStatusChanged(mId, iceConnectionState);
+        }
     }
 
     @Override
@@ -189,7 +202,7 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
         Log.d(TAG, "onAddStream " + mediaStream.label());
 
         if (mediaStream.videoTracks.size() == 1) {
-            mRtcListener.onAddRemoteStream(mediaStream, endPoint + 1);
+            mRtcListener.onAddRemoteStream(mediaStream, endPoint);
         }
 
         //            // remote streams are displayed from 1 to MAX_PEER (0 is localStream)
@@ -199,10 +212,10 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
     @Override
     public void onRemoveStream(MediaStream mediaStream) {
         Log.d(TAG, "onRemoveStream " + mediaStream.label());
-        if (mObserver != null)
-            mObserver.onRemove(mId);
-
-       close();
+//        if (mObserver != null)
+//            mObserver.onRemove(mId);
+        mRtcListener.onRemoveRemoteStream(endPoint);
+//        dispose();
     }
 
     @Override

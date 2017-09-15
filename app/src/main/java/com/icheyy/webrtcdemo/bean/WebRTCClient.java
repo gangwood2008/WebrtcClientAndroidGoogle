@@ -9,7 +9,7 @@ import android.util.Log;
 import android.widget.Toast;
 
 import com.icheyy.webrtcdemo.PeerConnectionParameters;
-import com.icheyy.webrtcdemo.activity.CallActivity;
+import com.icheyy.webrtcdemo.base.BaseAppActivity;
 import com.icheyy.webrtcdemo.helper.PeerManager;
 
 import org.json.JSONException;
@@ -31,6 +31,7 @@ import org.webrtc.VideoTrack;
 import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Map;
 
 import io.socket.client.IO;
@@ -55,7 +56,6 @@ public class WebRTCClient {
     // 本地连接参数和媒体信息
     private PeerConnectionParameters pcParams;
 
-    //    private MediaStream localMS;
     private VideoSource videoSource;
     private VideoCapturer videoCapturer;
     private MediaStream localMS;
@@ -91,232 +91,14 @@ public class WebRTCClient {
         mSignallingListener = signallingListener;
     }
 
-    //    public void sendMessage(String msg) {
-    //        mSocket.send(msg);
-    //    }
-    //
-    //    public void sendMessage(JSONObject jsonObject) {
-    //        if (jsonObject == null) return;
-    //        Log.i(TAG, "sendMessage: " + jsonObject.toString());
-    //        mSocket.send(jsonObject.toString());
-    //    }
 
-    //    private class Peer implements SdpObserver, PeerConnection.Observer {
-    //        private PeerConnection pc;
-    //        private String id;
-    //        private int endPoint;
-    //
-    //        @Override
-    //        public void onCreateSuccess(final SessionDescription sdp) {// createOffer/createAnswer成功回调此方法
-    //            if (sdp == null) return;
-    //            Log.d(TAG, "onCreateSuccess: sdp.description:: \n" + sdp.description);
-    //            Log.i(TAG, "onCreateSuccess: sdp.type.canonicalForm():: " + sdp.type.canonicalForm());
-    //
-    //            try {
-    //                JSONObject payload = new JSONObject();
-    //                payload.put("type", sdp.type.canonicalForm());
-    //                payload.put("sdp", sdp.description);
-    //
-    //                JSONObject msg = new JSONObject();
-    //                msg.put("event", sdp.type.canonicalForm());
-    //                msg.put("connectedUser", mConnectedId);
-    //                msg.put(sdp.type.canonicalForm(), payload);
-    //                sendMessage(msg);
-    //                pc.setLocalDescription(Peer.this, sdp);
-    //            } catch (JSONException e) {
-    //                e.printStackTrace();
-    //            }
-    //        }
-    //
-    //        @Override
-    //        public void onSetSuccess() {
-    //        }
-    //
-    //        @Override
-    //        public void onCreateFailure(String s) {
-    //            Log.e(TAG, "onCreateFailure: " + s);
-    //        }
-    //
-    //        @Override
-    //        public void onSetFailure(String s) {
-    //        }
-    //
-    //        @Override
-    //        public void onSignalingChange(PeerConnection.SignalingState signalingState) {
-    //        }
-    //
-    //        @Override
-    //        public void onIceConnectionChange(PeerConnection.IceConnectionState iceConnectionState) {
-    //            Log.i(TAG, "onIceConnectionChange: id:: " + id);
-    //            Log.d(TAG, "onIceConnectionChange: " + iceConnectionState);
-    //            if (iceConnectionState == PeerConnection.IceConnectionState.DISCONNECTED) {
-    //                if (peers != null) {
-    //                    removePeer(id);
-    //                }
-    //            }
-    //            if (mListener != null) {
-    //                mListener.onStatusChanged(id, iceConnectionState);
-    //            }
-    //        }
-    //
-    //        @Override
-    //        public void onIceConnectionReceivingChange(boolean b) {
-    //            //===================================
-    //            Log.d(TAG, "IceConnectionReceiving changed to " + b);
-    //        }
-    //
-    //        @Override
-    //        public void onIceGatheringChange(PeerConnection.IceGatheringState iceGatheringState) {
-    //        }
-    //
-    //        @Override
-    //        public void onIceCandidate(final IceCandidate candidate) {
-    //            if (candidate == null) return;
-    //            Log.d(TAG, "onIceCandidate: \ncandidate.sdpMLineIndex:: " + candidate.sdpMLineIndex +
-    //                    "\ncandidate.sdpMid:: " + candidate.sdpMid);
-    //            Log.d(TAG, "onIceCandidate: candidate.sdp:: \n" + candidate.sdp);
-    //
-    //            try {
-    //                JSONObject payload = new JSONObject();
-    //                payload.put("sdpMLineIndex", candidate.sdpMLineIndex);
-    //                payload.put("sdpMid", candidate.sdpMid);
-    //                payload.put("candidate", candidate.sdp);
-    //
-    //                JSONObject msg = new JSONObject();
-    //                msg.put("event", "candidate");
-    //                msg.put("connectedUser", mConnectedId);
-    //                msg.put("candidate", payload);
-    //                sendMessage(msg);
-    //            } catch (JSONException e) {
-    //                e.printStackTrace();
-    //            }
-    //        }
-    //
-    //        @Override
-    //        public void onIceCandidatesRemoved(IceCandidate[] iceCandidates) {
-    //            //====================================
-    //            Log.d(TAG, "onIceCandidatesRemoved: ");
-    //        }
-    //
-    //        @Override
-    //        public void onAddStream(MediaStream mediaStream) {
-    //            Log.d(TAG, "onAddStream " + mediaStream.label());
-    //
-    //            if (mediaStream.videoTracks.size() == 1) {
-    //                mListener.onAddRemoteStream(mediaStream, endPoint + 1);
-    //            }
-    //
-    ////            // remote streams are displayed from 1 to MAX_PEER (0 is localStream)
-    ////            mListener.onAddRemoteStream(mediaStream, endPoint + 1);
-    //        }
-    //
-    //        @Override
-    //        public void onRemoveStream(MediaStream mediaStream) {
-    //            Log.d(TAG, "onRemoveStream " + mediaStream.label());
-    //            removePeer(id);
-    //        }
-    //
-    //        @Override
-    //        public void onDataChannel(DataChannel dataChannel) {
-    //        }
-    //
-    //        @Override
-    //        public void onRenegotiationNeeded() {
-    //        }
-    //
-    //        @Override
-    //        public void onAddTrack(RtpReceiver rtpReceiver, MediaStream[] mediaStreams) {
-    //            //================================
-    //            Log.d(TAG, "onAddTrack: ");
-    //        }
-    //
-    //        public Peer(String id, int endPoint) {
-    //            Log.d(TAG, "new Peer: " + id + " " + endPoint);
-    //
-    //
-    //            PeerConnection.RTCConfiguration rtcConfig = new PeerConnection.RTCConfiguration(iceServers);
-    //            // TCP candidates are only useful when connecting to a server that supports
-    //            // ICE-TCP.
-    //            rtcConfig.tcpCandidatePolicy = PeerConnection.TcpCandidatePolicy.DISABLED;
-    //            rtcConfig.bundlePolicy = PeerConnection.BundlePolicy.MAXBUNDLE;
-    //            rtcConfig.rtcpMuxPolicy = PeerConnection.RtcpMuxPolicy.REQUIRE;
-    //            rtcConfig.continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY;
-    //            // Use ECDSA encryption.
-    //            rtcConfig.keyType = PeerConnection.KeyType.ECDSA;
-    //            this.pc = factory.createPeerConnection(rtcConfig, pcConstraints, this);
-    //
-    ////            this.pc = factory.createPeerConnection(iceServers, pcConstraints, this);
-    //
-    //            this.id = id;
-    //            this.endPoint = endPoint;
-    //
-    //            Log.d(TAG, "Peer: localMS:: " + localMS);
-    //            if(localMS != null) {
-    //                pc.addStream(localMS);
-    //            }
-    //
-    ////            if (mListener != null) {
-    ////                mListener.onStatusChanged(id + " CONNECTING");
-    ////            }
-    //        }
-    //
-    //        @Override
-    //        public String toString() {
-    //            return "Peer{pc: " + pc + ", id: " + id + ", endPoint: " + endPoint + "}";
-    //        }
-    //    }
-
-
-    //    public Peer addPeer(String id, int endPoint) {
-    //        LinkedList<PeerConnection.IceServer> iceServers = new LinkedList<>();
-    //        iceServers.add(new PeerConnection.IceServer("turn:call.icheyy.top","cheyy","cheyy"));
-    //        PeerConnection.RTCConfiguration rtcConfig = new PeerConnection.RTCConfiguration(iceServers);
-    //        // TCP candidates are only useful when connecting to a server that supports
-    //        // ICE-TCP.
-    //        rtcConfig.tcpCandidatePolicy = PeerConnection.TcpCandidatePolicy.DISABLED;
-    //        rtcConfig.bundlePolicy = PeerConnection.BundlePolicy.MAXBUNDLE;
-    //        rtcConfig.rtcpMuxPolicy = PeerConnection.RtcpMuxPolicy.REQUIRE;
-    //        rtcConfig.continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY;
-    //        // Use ECDSA encryption.
-    //        rtcConfig.keyType = PeerConnection.KeyType.ECDSA;
-    //
-    //        Peer peer = new Peer(id, endPoint, localMS,mSocket);
-    //
-    //        peer.setPeerConnection(factory.createPeerConnection(rtcConfig, pcConstraints, peer));
-    //        peers.put(id, peer);
-    //        endPoints[endPoint] = true;
-    //        return peer;
-    //    }
-    //
-    //
-    //    public void removePeer(String id) {
-    //        Peer peer = peers.get(id);
-    //        if (peer == null) return;
-    //        mListener.onRemoveRemoteStream(peer.getEndPoint());
-    //        //        peer.pc.close();
-    //        peers.remove(peer.getId());
-    //        endPoints[peer.getEndPoint()] = false;
-    //    }
-    //
-    //    public void removeAllPeers() {
-    //        //        for (Map.Entry<String, Peer> entry : peers.entrySet()) {
-    //        //            String id = entry.getKey();
-    //        //            Peer peer = peers.get(id);
-    //        ////            mListener.onRemoveRemoteStream(peer.endPoint);
-    //        //            peer.pc.close();
-    //        //            endPoints[peer.endPoint] = false;
-    //        //        }
-    //        peers.clear();
-    //    }
-    //
-
-
-    private Handler mHandler = CallActivity.mHandler;
+    private Handler mHandler = BaseAppActivity.mHandler;
     private Context mContext;
+    private PeerConnectionFactory factory;
 
 
     public WebRTCClient(RtcListener listener, RtcSignallingListener signallingListener, String host, IO.Options options,
-                        PeerConnectionParameters params, /*EGLContext mEGLContext, */final Context context) {
+                        PeerConnectionParameters params, final Context context) {
         Log.i(TAG, ">>>>>>> WebRTCClient: host:: " + host);
         mContext = context;
         mListener = listener;
@@ -328,17 +110,25 @@ public class WebRTCClient {
         pcConstraints.mandatory.add(new MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"));
         pcConstraints.optional.add(new MediaConstraints.KeyValuePair("DtlsSrtpKeyAgreement", "true"));
 
-        mSocket = initNativeSocket(context, host, options);
+        mSocket = initNativeSocket(host, options);
 
-        mPM = new PeerManager(context, pcParams);
+        // creatPeerConnectionFactory
+        PeerConnectionFactory.initializeAndroidGlobals(
+                context/*上下文，可自定义监听*/, pcParams.videoCodecHwAcceleration/*是否支持硬件加速*/);
+        PeerConnectionFactory.Options opt = null;
+        if (pcParams.loopback) {
+            opt = new PeerConnectionFactory.Options();
+            opt.networkIgnoreMask = 0;
+        }
+        factory = new PeerConnectionFactory(opt);
+
+        mPM = new PeerManager();
     }
 
     /**
      * 初始化本地socket
-     *
-     * @param context
      */
-    private io.socket.client.Socket initNativeSocket(Context context, String host, IO.Options options) {
+    private io.socket.client.Socket initNativeSocket(String host, IO.Options options) {
 
         try {
             //            mSocket = IO.socket(host);
@@ -483,11 +273,11 @@ public class WebRTCClient {
         if (isAccept) {
             String mConnectedId = getSelfPeer().getCallerId();
             if (!mPM.containPeer(mConnectedId)) {
-                mPM.addPeer(mConnectedId, 1, localMS, pcConstraints, mSocket);
+                createRemotePeer(mConnectedId);
             }
             Peer peer = mPM.getPeer(mConnectedId);
             peer.setRTCListener(mListener);
-            peer.setCallerId(mConnectedId);
+            peer.setCallerId(mSelfId);
             Log.i(TAG, "handleAccept: mConnectedId:: " + mConnectedId);
             Log.d(TAG, "handleAccept: peer:: " + peer);
             Log.d(TAG, "handleAccept: peerConn:: " + peer.getPeerConnection());
@@ -542,6 +332,7 @@ public class WebRTCClient {
     }
 
     public void handleLeave() {
+        Log.d(TAG, "handleLeave: ");
         mHandler.post(new Runnable() {
             @Override
             public void run() {
@@ -549,23 +340,17 @@ public class WebRTCClient {
             }
         });
 
+        String callerId = getSelfPeer().getCallerId();
+        mPM.removePeer(callerId);
+
         if (mListener != null) {
             mListener.onRemoveRemoteStream(1);
+            mListener = null;
         }
 
-        mPM.removeAllPeers();
-        //        mListener = null;
-        getSelfPeer().setCallerId(null);
+//        mPM.dispose();
+        //        getSelfPeer().setCallerId(null);
 
-        //        alert("通话已结束");
-        //        connectedUser = null;
-        //        this.remote_video = "";
-        //        peerConn.close();
-        //        peerConn.onicecandidate = null;
-        //        peerConn.onaddstream = null;
-        //        if (peerConn.signalingState == 'closed') {
-        //            this.initCreate();
-        //        }
     }
 
     private void closeSocket() {
@@ -577,31 +362,49 @@ public class WebRTCClient {
      * Call this method in Activity.onPause()
      */
     public void onPause() {
-        //        if (videoSource != null) videoSource.stop();
+//                if (videoSource != null) videoSource.stop();
     }
 
     /**
      * Call this method in Activity.onResume()
      */
     public void onResume() {
-        //        if (videoSource != null) videoSource.restart();
+//                if (videoSource != null) videoSource.restart();
     }
 
     /**
      * Call this method in Activity.onDestroy()
      */
     public void onDestroy() {
+        Log.d(TAG, "onDestroy");
 
         if (videoSource != null) {
+            Log.d(TAG, "VideoSource dispose");
             videoSource.dispose();
+            videoSource = null;
         }
+
+        if(mPM != null) {
+            Log.d(TAG, "PeerManager dispose");
+            mPM.dispose();
+            mPM = null;
+        }
+
+        if (factory != null) {
+            Log.d(TAG, "PeerConnectionFactory dispose");
+            factory.dispose();
+            factory = null;
+        }
+
 
         if (mSocket != null) {
+            Log.d(TAG, "Socket dispose");
             closeSocket();
+            mSocket = null;
         }
-        mPM.dispose();
-    }
 
+
+    }
 
 
     /**
@@ -609,18 +412,18 @@ public class WebRTCClient {
      * <p>
      * Set up the local stream and notify the signaling server.
      * Call this method after onCallReady.
-     *
      */
     public void start(EglBase.Context renderEGLContext) {
-        setCamera(renderEGLContext);
+        initPeerConnectFactory(renderEGLContext);
         getSelfPeer().setStream(localMS);
     }
 
-    private void setCamera(EglBase.Context renderEGLContext) {
+    private void initPeerConnectFactory(EglBase.Context renderEGLContext) {
 
-        PeerConnectionFactory factory = mPM.getFactory();
         localMS = factory.createLocalMediaStream("ARDAMS");
-        Log.i(TAG, "setCamera: localMS:: " + localMS);
+        Log.i(TAG, "initPeerConnectFactory: localMS:: " + localMS);
+
+
         VideoTrack track = null;
         if (pcParams.videoCallEnabled) {
             factory.setVideoHwAccelerationOptions(renderEGLContext, renderEGLContext);
@@ -630,10 +433,8 @@ public class WebRTCClient {
             videoConstraints.mandatory.add(new MediaConstraints.KeyValuePair("maxFrameRate", Integer.toString(pcParams.videoFps)));
             videoConstraints.mandatory.add(new MediaConstraints.KeyValuePair("minFrameRate", Integer.toString(pcParams.videoFps)));
 
-            //            VideoCapturer videoCapturer = getVideoCapturer();
-            //            VideoCapturer videoCapturer = createCameraCapturer(new Camera2Enumerator(mContext));
             videoCapturer = createCameraCapturer(new Camera1Enumerator(true));
-            Log.d(TAG, "setCamera: videoCapturer:: " + videoCapturer);
+            Log.d(TAG, "initPeerConnectFactory: videoCapturer:: " + videoCapturer);
             if (videoCapturer == null)
                 return;
             videoSource = factory.createVideoSource(videoCapturer/*, videoConstraints*/);
@@ -646,7 +447,7 @@ public class WebRTCClient {
         AudioSource audioSource = factory.createAudioSource(new MediaConstraints());
         localMS.addTrack(factory.createAudioTrack("ARDAMSa0", audioSource));
 
-        Log.d(TAG, "setCamera: track:: " + track);
+        Log.d(TAG, "initPeerConnectFactory: track:: " + track);
         mListener.onLocalStream(localMS, track);
     }
 
@@ -721,15 +522,41 @@ public class WebRTCClient {
     //    }
 
 
+    private void createLocalPeer(String name) {
+        createPeer(name, 0);
+    }
+
+    private void createRemotePeer(String name) {
+        createPeer(name, 1);
+    }
+
+    private void createPeer(String name, int endPoint) {
+        Peer peer = new Peer(name, endPoint, mSocket);
+        if (factory == null) {
+            Log.e(TAG, "faile createPeer " +  name + ", PeerConnectionFactory is null");
+            return;
+        }
+        PeerConnection pc = factory.createPeerConnection(getRTCConfig(), pcConstraints, peer);
+        peer.setPeerConnection(pc);
+        peer.setStream(localMS);
+        mPM.addPeer(peer);
+    }
+
     public void toJoin(String name) {
         Log.i(TAG, "toJoin: ====================");
-        Log.d(TAG, "toJoin: name:: " + name);
+        Log.d(TAG, "toJoin: Local name:: " + name);
         if (TextUtils.isEmpty(name)) {
             Log.e(TAG, "toJoin: Ooops...this username cannot be empty, please try again");
             return;
         }
+
+        sendMsJoin(name);
+        createLocalPeer(name);
         mSelfId = name;
 
+    }
+
+    private void sendMsJoin(String name) {
         JSONObject msg = new JSONObject();
         try {
             msg.put("event", "join");
@@ -738,19 +565,34 @@ public class WebRTCClient {
             e.printStackTrace();
         }
         sendMessage(msg);
-        mPM.removeAllPeers();
-        mPM.addPeer(name, 0,localMS,pcConstraints, mSocket);
+        mPM.dispose();
     }
 
     public void sendMessage(String msg) {
-        mSocket.send(msg);
+        if (mSocket != null)
+            mSocket.send(msg);
     }
 
     public void sendMessage(JSONObject jsonObject) {
         if (jsonObject == null)
             return;
         Log.i(TAG, "sendMessage: " + jsonObject.toString());
-        mSocket.send(jsonObject.toString());
+        sendMessage(jsonObject.toString());
+    }
+
+    private PeerConnection.RTCConfiguration getRTCConfig() {
+        LinkedList<PeerConnection.IceServer> iceServers = new LinkedList<>();
+        iceServers.add(new PeerConnection.IceServer("turn:call.icheyy.top", "cheyy", "cheyy"));
+        PeerConnection.RTCConfiguration rtcConfig = new PeerConnection.RTCConfiguration(iceServers);
+        // TCP candidates are only useful when connecting to a server that supports
+        // ICE-TCP.
+        rtcConfig.tcpCandidatePolicy = PeerConnection.TcpCandidatePolicy.DISABLED;
+        rtcConfig.bundlePolicy = PeerConnection.BundlePolicy.MAXBUNDLE;
+        rtcConfig.rtcpMuxPolicy = PeerConnection.RtcpMuxPolicy.REQUIRE;
+        rtcConfig.continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY;
+        // Use ECDSA encryption.
+        rtcConfig.keyType = PeerConnection.KeyType.ECDSA;
+        return rtcConfig;
     }
 
 
@@ -763,11 +605,9 @@ public class WebRTCClient {
         return mSelfId;
     }
 
-    public void setSelfId(String selfId) {
-        mSelfId = selfId;
-    }
 
     public Peer getSelfPeer() {
+        Log.d(TAG, "getSelfPeer: " + mSelfId + "   " + mPM.getPeer(mSelfId));
         return mPM.getPeer(mSelfId);
     }
 

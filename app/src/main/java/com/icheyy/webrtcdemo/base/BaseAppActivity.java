@@ -3,6 +3,7 @@ package com.icheyy.webrtcdemo.base;
 import android.app.Activity;
 import android.graphics.Point;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -33,6 +34,8 @@ public abstract class BaseAppActivity extends Activity {
 
     private Toast logToast;
     protected static WebRTCClient pcClient;
+    public static Handler mHandler = new Handler();
+
 
 
     @Override

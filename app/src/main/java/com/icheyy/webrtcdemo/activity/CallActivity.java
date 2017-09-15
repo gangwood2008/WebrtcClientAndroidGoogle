@@ -2,10 +2,8 @@ package com.icheyy.webrtcdemo.activity;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.os.Handler;
 import android.text.TextUtils;
 import android.util.Log;
-import android.widget.EditText;
 import android.widget.Toast;
 
 import com.icheyy.webrtcdemo.ProxyRenderer;
@@ -24,27 +22,9 @@ import org.webrtc.SurfaceViewRenderer;
 import org.webrtc.VideoRenderer;
 import org.webrtc.VideoTrack;
 
-import java.security.KeyManagementException;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.TrustManagerFactory;
-import javax.net.ssl.X509TrustManager;
-
-import io.socket.client.IO;
-import okhttp3.OkHttpClient;
-
-//import org.webrtc.VideoRendererGui;
 
 public class CallActivity extends BaseAppActivity {
 
@@ -129,16 +109,14 @@ public class CallActivity extends BaseAppActivity {
     private static final int REMOTE_WIDTH = 100;
     private static final int REMOTE_HEIGHT = 100;
 
+
     //    private VideoRendererGui.ScalingType scalingType = VideoRendererGui.ScalingType.SCALE_ASPECT_FILL;
-
-    private EditText mEtName;
-    private EditText mEtCalleeName;
     //    private GLSurfaceView vsv;
-//    private VideoRenderer.Callbacks localRender;
-//    private VideoRenderer.Callbacks remoteRender;
+    //    private VideoRenderer.Callbacks localRender;
+    //    private VideoRenderer.Callbacks remoteRender;
 
-    public static Handler mHandler = new Handler();
-    private String mSocketAddress;
+
+
 
     //==========================================
     private SurfaceViewRenderer pipRenderer;
@@ -162,56 +140,22 @@ public class CallActivity extends BaseAppActivity {
         initViews();
 
         final Intent intent = getIntent();
-
         // Get Intent parameters. 取得用户名
-//        String userName = intent.getStringExtra(EXTRA_USER_NAME);
-//        Log.d(TAG, "user name is: " + userName);
-//        if (userName == null || userName.length() == 0) {
-//            logAndToast("用户名为空");
-//            Log.e(TAG, "Incorrect user name in intent!");
-//            setResult(RESULT_CANCELED);
-//            finish();
-//            return;
-//        }
+        String callerName = intent.getStringExtra(EXTRA_CALLER_NAME);
+        Log.d(TAG, "toCall: calleeName:: " + callerName);
+        if (TextUtils.isEmpty(callerName)) {
+            Log.e(TAG, "toCall: Ooops...this username cannot be empty, please try again");
+            return;
+        }
+
+        // pc init
+        // Camera settings(顺序问题)
         pcClient.setListener(mRtcListener);
-        startCam();
-        toCall();
+        pcClient.start(rootEglBase.getEglBaseContext());
 
-
-//        init();
-//        vsv = (GLSurfaceView) findViewById(R.id.glview_call);
-//        vsv.setPreserveEGLContextOnPause(true);
-//        vsv.setKeepScreenOn(true);
-//        VideoRendererGui.setView(vsv, new Runnable() {
-//            @Override
-//            public void run() {
-//                Log.i(TAG, "run in VideoRendererGui.setView");
-//                init();
-//            }
-//        });
-
-        // local and remote render
-//        remoteRender = VideoRendererGui.create(
-//                REMOTE_X, REMOTE_Y,
-//                REMOTE_WIDTH, REMOTE_HEIGHT, scalingType, false);
-//        localRender = VideoRendererGui.create(
-//                LOCAL_X_CONNECTING, LOCAL_Y_CONNECTING,
-//                LOCAL_WIDTH_CONNECTING, LOCAL_HEIGHT_CONNECTING, scalingType, true);
+        toCall(callerName);
 
     }
-
-
-
-    private void setSwappedFeeds(boolean isSwappedFeeds) {
-        Logging.d(TAG, "setSwappedFeeds: " + isSwappedFeeds);
-        this.isSwappedFeeds = isSwappedFeeds;
-        localProxyRenderer.setTarget(isSwappedFeeds ? fullscreenRenderer : pipRenderer);
-        remoteProxyRenderer.setTarget(isSwappedFeeds ? pipRenderer : fullscreenRenderer);
-        fullscreenRenderer.setMirror(isSwappedFeeds);
-        pipRenderer.setMirror(!isSwappedFeeds);
-    }
-
-
 
 
     private void initViews() {
@@ -236,16 +180,26 @@ public class CallActivity extends BaseAppActivity {
     }
 
 
-    public void toCall() {
-        Log.d(TAG, "toCall: ====================");
-        // Get Intent parameters. 取得用户名
-        final Intent intent = getIntent();
-        String callerName = intent.getStringExtra(EXTRA_CALLER_NAME);
-        Log.d(TAG, "toCall: calleeName:: " + callerName);
-        if (TextUtils.isEmpty(callerName)) {
-            Log.e(TAG, "toCall: Ooops...this username cannot be empty, please try again");
-        }
+    private void setSwappedFeeds(boolean isSwappedFeeds) {
+        Logging.d(TAG, "setSwappedFeeds: " + isSwappedFeeds);
+        this.isSwappedFeeds = isSwappedFeeds;
+        localProxyRenderer.setTarget(isSwappedFeeds ? fullscreenRenderer : pipRenderer);
+        remoteProxyRenderer.setTarget(isSwappedFeeds ? pipRenderer : fullscreenRenderer);
+        fullscreenRenderer.setMirror(isSwappedFeeds);
+        pipRenderer.setMirror(!isSwappedFeeds);
+    }
 
+
+
+    public void toCall(String callerName) {
+        Log.d(TAG, "toCall: ====================");
+
+        sendMsCall(callerName);
+        pcClient.getSelfPeer().setCallerId(callerName);
+
+    }
+
+    private void sendMsCall (String callerName) {
         JSONObject msg = new JSONObject();
         try {
             msg.put("event", "call");
@@ -254,10 +208,6 @@ public class CallActivity extends BaseAppActivity {
             e.printStackTrace();
         }
         pcClient.getSelfPeer().sendMessage(msg);
-//        pcClient.setConnectedId(callerName);
-        pcClient.getSelfPeer().setCallerId(callerName);
-        //TODO
-//        pcClient.addPeer(calleeName, 1);
     }
 
 
@@ -272,8 +222,9 @@ public class CallActivity extends BaseAppActivity {
             e.printStackTrace();
         }
         pcClient.getSelfPeer().sendMessage(msg);
+
         if (!isSwappedFeeds) setSwappedFeeds(true);
-        pcClient.handleLeave();
+
     }
 
     @Override
@@ -296,27 +247,20 @@ public class CallActivity extends BaseAppActivity {
 
     @Override
     protected void onStop() {
-        super.onStop();
+        toHangUp();
+
+//        pcClient.handleLeave();
         if (pcClient != null) {
             pcClient.stopVideoSource();
         }
+        super.onStop();
     }
 
     @Override
     public void onDestroy() {
-        toHangUp();
-
-        if (pcClient != null) {
-            pcClient.onDestroy();
-        }
+        Log.d(TAG, "onDestroy");
         disconnect();
         super.onDestroy();
-    }
-
-
-    public void startCam() {
-        // Camera settings
-        pcClient.start(rootEglBase.getEglBaseContext());
     }
 
     private WebRTCClient.RtcListener mRtcListener = new WebRTCClient.RtcListener() {
@@ -376,14 +320,6 @@ public class CallActivity extends BaseAppActivity {
                 mRemoteVideoTrack.addRenderer(new VideoRenderer(remoteRender));
             }
 
-            //        remoteStream.videoTracks.get(0).addRenderer(new VideoRenderer(remoteRender));
-            //        VideoRendererGui.update(remoteRender,
-            //                REMOTE_X, REMOTE_Y,
-            //                REMOTE_WIDTH, REMOTE_HEIGHT, scalingType);
-            //        VideoRendererGui.update(localRender,
-            //                LOCAL_X_CONNECTED, LOCAL_Y_CONNECTED,
-            //                LOCAL_WIDTH_CONNECTED, LOCAL_HEIGHT_CONNECTED,
-            //                scalingType);
         }
 
         @Override
@@ -416,83 +352,6 @@ public class CallActivity extends BaseAppActivity {
             fullscreenRenderer.release();
         }
     }
-
-    private IO.Options getIOOptions() {
-        SSLSocketFactory sslSocketFactory = getSSLSocketFactory();
-        X509TrustManager x509TrustManager = getX509TrustManager();
-        if (sslSocketFactory == null || x509TrustManager == null) return null;
-
-        OkHttpClient okHttpClient = new OkHttpClient.Builder()
-                .hostnameVerifier(new HostnameVerifier() {
-                    @Override
-                    public boolean verify(String hostname, SSLSession session) {
-                        return true;
-                    }
-                })
-                .sslSocketFactory(sslSocketFactory, x509TrustManager)
-                .build();
-
-        // default settings for all sockets
-        IO.setDefaultOkHttpWebSocketFactory(okHttpClient);
-        IO.setDefaultOkHttpCallFactory(okHttpClient);
-
-        // set as an option
-        IO.Options opts = new IO.Options();
-        opts.callFactory = okHttpClient;
-        opts.webSocketFactory = okHttpClient;
-        return opts;
-    }
-
-    private X509TrustManager getX509TrustManager() {
-        TrustManager[] trustManagers = null;
-        try {
-            TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-            trustManagerFactory.init((KeyStore) null);
-            trustManagers = trustManagerFactory.getTrustManagers();
-            if (trustManagers.length != 1 || !(trustManagers[0] instanceof X509TrustManager)) {
-                throw new IllegalStateException("Unexpected default trust managers:" + Arrays.toString(trustManagers));
-            }
-            return (X509TrustManager) trustManagers[0];
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (KeyStoreException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    private SSLSocketFactory getSSLSocketFactory() {
-        TrustManager[] trustAllCerts = new TrustManager[]{new X509TrustManager() {
-            @Override
-            public void checkClientTrusted(
-                    java.security.cert.X509Certificate[] chain,
-                    String authType) throws CertificateException {
-            }
-
-            @Override
-            public void checkServerTrusted(
-                    java.security.cert.X509Certificate[] chain,
-                    String authType) throws CertificateException {
-            }
-
-            @Override
-            public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-                return null;
-            }
-        }};
-
-        SSLContext sslContext = null;
-        try {
-            sslContext = SSLContext.getInstance("SSL");
-            sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (KeyManagementException e) {
-            e.printStackTrace();
-        }
-        return sslContext == null ? null : sslContext.getSocketFactory();
-    }
-
 
 
 }
