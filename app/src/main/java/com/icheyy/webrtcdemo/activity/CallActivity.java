@@ -223,9 +223,13 @@ public class CallActivity extends BaseAppActivity {
         }
         pcClient.getSelfPeer().sendMessage(msg);
 
+        PeerConnection pc = pcClient.getPeer(pcClient.getSelfPeer().getCallerId()).getPeerConnection();
+        pc.close();
+
         if (!isSwappedFeeds) setSwappedFeeds(true);
 
     }
+
 
     @Override
     public void onPause() {

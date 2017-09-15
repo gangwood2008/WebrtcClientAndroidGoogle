@@ -341,7 +341,7 @@ public class WebRTCClient {
         });
 
         String callerId = getSelfPeer().getCallerId();
-        mPM.removePeer(callerId);
+//        mPM.removePeer(callerId);
 
         if (mListener != null) {
             mListener.onRemoveRemoteStream(1);
@@ -603,6 +603,10 @@ public class WebRTCClient {
 
     public String getSelfId() {
         return mSelfId;
+    }
+
+    public Peer getPeer(String name) {
+        return mPM.getPeer(name);
     }
 
 

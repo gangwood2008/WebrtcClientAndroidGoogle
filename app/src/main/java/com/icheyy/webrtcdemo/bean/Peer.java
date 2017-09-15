@@ -18,7 +18,7 @@ import org.webrtc.SessionDescription;
  */
 
 public class Peer implements SdpObserver, PeerConnection.Observer {
-    private static final String TAG = Peer.class.getSimpleName();
+    private static final String TAG = Peer.class.getSimpleName() + "_LOG";
 
     /**
      * 连接通道
@@ -40,21 +40,23 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
 
     private io.socket.client.Socket mSocket;
 
-//    public void setObserver(PeerObserver observer) {
-//        mObserver = observer;
-//    }
+    //    public void setObserver(PeerObserver observer) {
+    //        mObserver = observer;
+    //    }
 
-//    private PeerObserver mObserver;
+    //    private PeerObserver mObserver;
     private WebRTCClient.RtcListener mRtcListener;
 
-    public interface PeerObserver {
-        /**
-         * 本peer需要移除
-         *
-         * @param id
-         */
-        void onRemove(String id);
-    }
+    private MediaStream mMS;
+
+    //    public interface PeerObserver {
+    //        /**
+    //         * 本peer需要移除
+    //         *
+    //         * @param id
+    //         */
+    //        void onRemove(String id);
+    //    }
 
     public Peer(String id, int endPoint, io.socket.client.Socket socket) {
         Log.d(TAG, "new Peer: " + id + " " + endPoint);
@@ -71,6 +73,7 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
     public void setStream(MediaStream ms) {
         Log.d(TAG, "Peer: localMS:: " + ms);
         if (ms != null) {
+            mMS = ms;
             mConnection.addStream(ms);
         }
     }
@@ -81,11 +84,14 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
 
     public void dispose() {
         Log.d(TAG, "dispose: " + mId);
-        if(mRtcListener != null) {
+        if (mRtcListener != null) {
             mRtcListener.onRemoveRemoteStream(endPoint);
             mRtcListener = null;
         }
         if (mConnection != null) {
+            if (mMS != null)
+                mConnection.removeStream(mMS);
+            mConnection.close();
             mConnection.dispose();
             mConnection = null;
         }
@@ -124,15 +130,17 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
 
     @Override
     public void onSetSuccess() {
+        Log.d(TAG, "onSetSuccess: " + mId);
     }
 
     @Override
     public void onCreateFailure(String s) {
-        Log.e(TAG, "onCreateFailure: " + s);
+        Log.e(TAG, mId + "::onCreateFailure: " + s);
     }
 
     @Override
     public void onSetFailure(String s) {
+        Log.e(TAG, mId + "::onSetFailure: " + s);
     }
 
     //-------------------------------------SdpObserver interface end---------------------------------------------------------------
@@ -146,11 +154,11 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
 
     @Override
     public void onIceConnectionChange(PeerConnection.IceConnectionState iceConnectionState) {
-        Log.i(TAG, "onIceConnectionChange: mId:: " + mId);
-        Log.d(TAG, "onIceConnectionChange: " + iceConnectionState);
+        Log.i(TAG, mId + "::onIceConnectionChange:");
+        Log.d(TAG, mId + "::onIceConnectionChange: " + iceConnectionState);
 
-        if (iceConnectionState == PeerConnection.IceConnectionState.DISCONNECTED ) {
-//            mObserver.onRemove(mId);
+        if (iceConnectionState == PeerConnection.IceConnectionState.DISCONNECTED) {
+            //            mObserver.onRemove(mId);
             mRtcListener.onRemoveRemoteStream(endPoint);
         }
         if (mRtcListener != null) {
@@ -160,7 +168,7 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
 
     @Override
     public void onIceConnectionReceivingChange(boolean b) {
-        Log.d(TAG, "IceConnectionReceiving changed to " + b);
+        Log.d(TAG, mId + "::IceConnectionReceiving changed to " + b);
     }
 
     @Override
@@ -171,9 +179,9 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
     public void onIceCandidate(final IceCandidate candidate) {
         if (candidate == null)
             return;
-        Log.d(TAG, "onIceCandidate: \ncandidate.sdpMLineIndex:: " + candidate.sdpMLineIndex +
+        Log.d(TAG, mId + "::onIceCandidate: \ncandidate.sdpMLineIndex:: " + candidate.sdpMLineIndex +
                 "\ncandidate.sdpMid:: " + candidate.sdpMid);
-        Log.d(TAG, "onIceCandidate: candidate.sdp:: \n" + candidate.sdp);
+        Log.d(TAG, mId + "::onIceCandidate: candidate.sdp:: \n" + candidate.sdp);
 
         try {
             JSONObject payload = new JSONObject();
@@ -194,12 +202,12 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
     @Override
     public void onIceCandidatesRemoved(IceCandidate[] iceCandidates) {
         //====================================
-        Log.d(TAG, "onIceCandidatesRemoved: ");
+        Log.d(TAG, mId + "::onIceCandidatesRemoved: ");
     }
 
     @Override
     public void onAddStream(MediaStream mediaStream) {
-        Log.d(TAG, "onAddStream " + mediaStream.label());
+        Log.d(TAG, mId + "::onAddStream " + mediaStream.label());
 
         if (mediaStream.videoTracks.size() == 1) {
             mRtcListener.onAddRemoteStream(mediaStream, endPoint);
@@ -211,11 +219,12 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
 
     @Override
     public void onRemoveStream(MediaStream mediaStream) {
-        Log.d(TAG, "onRemoveStream " + mediaStream.label());
-//        if (mObserver != null)
-//            mObserver.onRemove(mId);
+        Log.d(TAG, mId + "::onRemoveStream " + mediaStream.label());
+        //        if (mObserver != null)
+        //            mObserver.onRemove(mId);
+        mConnection.removeStream(mMS);
         mRtcListener.onRemoveRemoteStream(endPoint);
-//        dispose();
+        //        dispose();
     }
 
     @Override

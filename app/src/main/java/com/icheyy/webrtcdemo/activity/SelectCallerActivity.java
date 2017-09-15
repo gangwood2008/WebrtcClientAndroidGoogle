@@ -117,6 +117,7 @@ public class SelectCallerActivity extends BaseAppActivity implements View.OnClic
                 public void onshow(JSONObject jsonAllUsers) {
                     Log.d(TAG, "onshow: " + jsonAllUsers);
                     try {
+                        mCallersList.clear();
                         Iterator<String> keys = jsonAllUsers.keys();
                         while (keys.hasNext()) {
                             String key = keys.next();
