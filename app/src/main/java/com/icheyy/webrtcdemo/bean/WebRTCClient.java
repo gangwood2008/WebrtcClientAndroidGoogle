@@ -582,7 +582,7 @@ public class WebRTCClient {
 
     private PeerConnection.RTCConfiguration getRTCConfig() {
         LinkedList<PeerConnection.IceServer> iceServers = new LinkedList<>();
-        iceServers.add(new PeerConnection.IceServer("turn:call.icheyy.top", "cheyy", "cheyy"));
+        iceServers.add(new PeerConnection.IceServer("turn:call.icheyy.top:3478", "cheyy", "cheyy"));
         PeerConnection.RTCConfiguration rtcConfig = new PeerConnection.RTCConfiguration(iceServers);
         // TCP candidates are only useful when connecting to a server that supports
         // ICE-TCP.
