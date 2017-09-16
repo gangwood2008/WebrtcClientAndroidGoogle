@@ -191,7 +191,7 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
 
             JSONObject msg = new JSONObject();
             msg.put("event", "candidate");
-            msg.put("connectedUser", mCallerId);
+            msg.put("connectedUser", mId);
             msg.put("candidate", payload);
             sendMessage(msg);
         } catch (JSONException e) {

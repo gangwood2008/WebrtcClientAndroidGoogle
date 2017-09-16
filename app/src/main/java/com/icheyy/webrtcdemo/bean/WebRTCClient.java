@@ -236,7 +236,7 @@ public class WebRTCClient {
                                 JSONObject msg = new JSONObject();
                                 try {
                                     msg.put("event", "accept");
-                                    msg.put("connectedUser", mSelfId);
+                                    msg.put("connectedUser", name);
                                     msg.put("accept", true);
                                 } catch (JSONException e) {
                                     e.printStackTrace();
@@ -252,7 +252,7 @@ public class WebRTCClient {
                                 JSONObject msg = new JSONObject();
                                 try {
                                     msg.put("event", "accept");
-                                    msg.put("connectedUser", mSelfId);
+                                    msg.put("connectedUser", name);
                                     msg.put("accept", false);
                                 } catch (JSONException e) {
                                     e.printStackTrace();

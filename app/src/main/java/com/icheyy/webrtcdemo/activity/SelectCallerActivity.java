@@ -140,7 +140,7 @@ public class SelectCallerActivity extends BaseAppActivity implements View.OnClic
 
                 }
             };
-            initPeerConnection (p2pServerUrl, signListener ,VIDEO_CODEC_VP9, AUDIO_CODEC_OPUS);
+            initPeerConnection (p2pServerUrl, signListener ,VIDEO_CODEC_VP8, AUDIO_CODEC_OPUS);
             return;
         }
 
