@@ -3,12 +3,14 @@ package com.icheyy.webrtcdemo.bean;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.os.Handler;
 import android.text.TextUtils;
 import android.util.Log;
 import android.widget.Toast;
 
 import com.icheyy.webrtcdemo.PeerConnectionParameters;
+import com.icheyy.webrtcdemo.activity.CallActivity;
 import com.icheyy.webrtcdemo.base.BaseAppActivity;
 import com.icheyy.webrtcdemo.helper.PeerManager;
 
@@ -233,16 +235,36 @@ public class WebRTCClient {
                         .setPositiveButton("Accept", new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
-                                JSONObject msg = new JSONObject();
-                                try {
-                                    msg.put("event", "accept");
-                                    msg.put("connectedUser", name);
-                                    msg.put("accept", true);
-                                } catch (JSONException e) {
-                                    e.printStackTrace();
+
+                                mHandler.postDelayed(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        JSONObject msg = new JSONObject();
+                                        try {
+                                            msg.put("event", "accept");
+                                            msg.put("connectedUser", name);
+                                            msg.put("accept", true);
+                                        } catch (JSONException e) {
+                                            e.printStackTrace();
+                                        }
+                                        Log.d(TAG, "onClick: sendAccept:: " + msg.toString());
+                                        mSocket.send(msg.toString());
+
+                                    }
+                                }, 3000);
+
+                                if (!mPM.containPeer(name)) {
+                                    createRemotePeer(name);
                                 }
-                                Log.d(TAG, "onClick: sendAccept:: " + msg.toString());
-                                mSocket.send(msg.toString());
+
+                                Intent intent = new Intent(mContext, CallActivity.class);
+                                intent.putExtra(CallActivity.EXTRA_USER_NAME, mSelfId);
+                                intent.putExtra(CallActivity.EXTRA_CALLER_NAME, name);
+                                intent.putExtra(CallActivity.EXTRA_IS_CALLED, true);
+
+                                mContext.startActivity(intent);
+
+
                                 dialog.cancel();
                             }
                         })

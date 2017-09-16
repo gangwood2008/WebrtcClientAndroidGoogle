@@ -9,6 +9,7 @@ import android.widget.Toast;
 import com.icheyy.webrtcdemo.ProxyRenderer;
 import com.icheyy.webrtcdemo.R;
 import com.icheyy.webrtcdemo.base.BaseAppActivity;
+import com.icheyy.webrtcdemo.bean.Peer;
 import com.icheyy.webrtcdemo.bean.WebRTCClient;
 
 import org.json.JSONException;
@@ -30,6 +31,7 @@ public class CallActivity extends BaseAppActivity {
 
     private static final String TAG = CallActivity.class.getSimpleName();
 
+    public static final String EXTRA_IS_CALLED = "com.icheyy.webrtc.IS_CALLED";//是否是呼叫方唤起
 
     public static final String EXTRA_USER_NAME = "com.icheyy.webrtc.USER_NAME";
     public static final String EXTRA_CALLER_NAME = "com.icheyy.webrtc.CALLER_NAME";
@@ -80,15 +82,6 @@ public class CallActivity extends BaseAppActivity {
     public static final String EXTRA_ID = "com.icheyy.webrtc.ID";
 
 
-
-
-
-
-
-
-
-
-
     private final static int VIDEO_CALL_SENT = 666;
     private static final String VIDEO_CODEC_VP8 = "VP8";
     private static final String VIDEO_CODEC_VP9 = "VP9";
@@ -114,8 +107,6 @@ public class CallActivity extends BaseAppActivity {
     //    private GLSurfaceView vsv;
     //    private VideoRenderer.Callbacks localRender;
     //    private VideoRenderer.Callbacks remoteRender;
-
-
 
 
     //==========================================
@@ -153,7 +144,17 @@ public class CallActivity extends BaseAppActivity {
         pcClient.setListener(mRtcListener);
         pcClient.start(rootEglBase.getEglBaseContext());
 
-        toCall(callerName);
+
+        Boolean isCalled = intent.getBooleanExtra(EXTRA_IS_CALLED, false);
+        if (!isCalled) {//是呼叫方
+            // Get Intent parameters. 取得用户名
+
+            toCall(callerName);
+        }else {
+            // 被呼叫
+            Peer caller = pcClient.getPeer(pcClient.getSelfPeer().getCallerId());
+            caller.setRTCListener(mRtcListener);
+        }
 
     }
 
@@ -190,7 +191,6 @@ public class CallActivity extends BaseAppActivity {
     }
 
 
-
     public void toCall(String callerName) {
         Log.d(TAG, "toCall: ====================");
 
@@ -199,7 +199,7 @@ public class CallActivity extends BaseAppActivity {
 
     }
 
-    private void sendMsCall (String callerName) {
+    private void sendMsCall(String callerName) {
         JSONObject msg = new JSONObject();
         try {
             msg.put("event", "call");
@@ -209,7 +209,6 @@ public class CallActivity extends BaseAppActivity {
         }
         pcClient.getSelfPeer().sendMessage(msg);
     }
-
 
 
     public void toHangUp() {
@@ -226,7 +225,8 @@ public class CallActivity extends BaseAppActivity {
         PeerConnection pc = pcClient.getPeer(pcClient.getSelfPeer().getCallerId()).getPeerConnection();
         pc.close();
 
-        if (!isSwappedFeeds) setSwappedFeeds(true);
+        if (!isSwappedFeeds)
+            setSwappedFeeds(true);
 
     }
 
@@ -253,7 +253,7 @@ public class CallActivity extends BaseAppActivity {
     protected void onStop() {
         toHangUp();
 
-//        pcClient.handleLeave();
+        //        pcClient.handleLeave();
         if (pcClient != null) {
             pcClient.stopVideoSource();
         }

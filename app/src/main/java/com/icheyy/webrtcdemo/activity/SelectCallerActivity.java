@@ -471,6 +471,7 @@ public class SelectCallerActivity extends BaseAppActivity implements View.OnClic
             intent.setData(uri);
             intent.putExtra(CallActivity.EXTRA_USER_NAME, userName);
             intent.putExtra(CallActivity.EXTRA_CALLER_NAME, callerName);
+            intent.putExtra(CallActivity.EXTRA_IS_CALLED, false);
 
             startActivityForResult(intent, CONNECTION_REQUEST);
         }
