@@ -71,7 +71,7 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
     }
 
     public void setStream(MediaStream ms) {
-        Log.d(TAG, "Peer: localMS:: " + ms);
+        Log.d(TAG, mId + "::Peer: localMS:: " + ms);
         if (ms != null) {
             mMS = ms;
             mConnection.addStream(ms);

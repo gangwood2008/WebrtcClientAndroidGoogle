@@ -318,7 +318,9 @@ public class WebRTCClient {
         String name = (String) data.get("name");
         JSONObject offer = (JSONObject) data.get("offer");
         Log.d(TAG, "handleOffer: name:: " + name);
+        getSelfPeer().setCallerId(name);
         Peer peer = mPM.getPeer(name);
+        peer.setStream(localMS);
         SessionDescription sdp = new SessionDescription(
                 SessionDescription.Type.fromCanonicalForm(offer.getString("type")),
                 offer.getString("sdp")
