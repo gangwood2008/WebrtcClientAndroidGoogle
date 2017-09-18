@@ -1,9 +1,11 @@
 package com.icheyy.webrtcdemo.activity;
 
+import android.Manifest;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
@@ -13,8 +15,14 @@ import android.widget.TextView;
 
 import com.icheyy.webrtcdemo.R;
 import com.icheyy.webrtcdemo.base.BaseAppActivity;
+import com.tbruyelle.rxpermissions2.Permission;
+import com.tbruyelle.rxpermissions2.RxPermissions;
+
+import io.reactivex.functions.Consumer;
 
 public class LoginActivity extends BaseAppActivity {
+
+    private static String TAG = LoginActivity.class.getSimpleName();
 
     private static final int CONNECTION_REQUEST = 1;
 
@@ -36,8 +44,44 @@ public class LoginActivity extends BaseAppActivity {
 
         initView();
 
+        initRxPermissions();
 
     }
+
+
+    /**
+     * 权限申请
+     */
+    private void initRxPermissions() {
+        // where this is an Activity instance
+        RxPermissions rxPermissions = new RxPermissions(this);
+        rxPermissions.requestEach(
+                Manifest.permission.CAMERA,
+                Manifest.permission.WAKE_LOCK,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                Manifest.permission.ACCESS_NETWORK_STATE,
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.MODIFY_AUDIO_SETTINGS,
+                Manifest.permission.RECORD_AUDIO,
+                Manifest.permission.INTERNET
+        )
+                .subscribe(new Consumer<Permission>() {
+                    @Override
+                    public void accept(Permission permission) throws Exception {
+                        if (permission.granted) {
+                            // 用户已经同意该权限
+                            Log.d(TAG, permission.name + " is granted.");
+                        } else if (permission.shouldShowRequestPermissionRationale) {
+                            // 用户拒绝了该权限，没有选中『不再询问』（Never ask again）,那么下次再次启动时，还会提示请求权限的对话框
+                            Log.d(TAG, permission.name + " is denied. More info should be provided.");
+                        } else {
+                            // 用户拒绝了该权限，并且选中『不再询问』
+                            Log.d(TAG, permission.name + " is denied.");
+                        }
+                    }
+                });
+    }
+
 
     private void getView() {
         et_user_name = (EditText) findViewById(R.id.et_user_name);
@@ -112,7 +156,6 @@ public class LoginActivity extends BaseAppActivity {
         return userName;
 
     }
-
 
 
 }

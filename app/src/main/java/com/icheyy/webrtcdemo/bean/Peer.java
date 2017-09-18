@@ -38,25 +38,13 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
      */
     private int endPoint;
 
-    private io.socket.client.Socket mSocket;
-
-    //    public void setObserver(PeerObserver observer) {
-    //        mObserver = observer;
-    //    }
-
-    //    private PeerObserver mObserver;
     private WebRTCClient.RtcListener mRtcListener;
-
+    private io.socket.client.Socket mSocket;
+    /**
+     * 通道流信息
+     */
     private MediaStream mMS;
 
-    //    public interface PeerObserver {
-    //        /**
-    //         * 本peer需要移除
-    //         *
-    //         * @param id
-    //         */
-    //        void onRemove(String id);
-    //    }
 
     public Peer(String id, int endPoint, io.socket.client.Socket socket) {
         Log.d(TAG, "new Peer: " + id + " " + endPoint);
@@ -112,25 +100,12 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
         Log.i(TAG, "onCreateSuccess: mId " + mId);
         Log.i(TAG, "onCreateSuccess: mCallerId " + mCallerId);
 
-        try {
-            JSONObject payload = new JSONObject();
-            payload.put("type", sdp.type.canonicalForm());
-            payload.put("sdp", sdp.description);
-
-            JSONObject msg = new JSONObject();
-            msg.put("event", sdp.type.canonicalForm());
-            msg.put("connectedUser", mId);
-            msg.put(sdp.type.canonicalForm(), payload);
-            sendMessage(msg);
-            mConnection.setLocalDescription(this, sdp);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
+        sendSDP(sdp);
     }
 
     @Override
     public void onSetSuccess() {
-        Log.d(TAG, "onSetSuccess: " + mId);
+        Log.d(TAG, mId + "::onSetSuccess");
     }
 
     @Override
@@ -150,15 +125,14 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
 
     @Override
     public void onSignalingChange(PeerConnection.SignalingState signalingState) {
+        Log.d(TAG, mId + "::onSignalingChange: " + signalingState.toString());
     }
 
     @Override
     public void onIceConnectionChange(PeerConnection.IceConnectionState iceConnectionState) {
-        Log.i(TAG, mId + "::onIceConnectionChange:");
         Log.d(TAG, mId + "::onIceConnectionChange: " + iceConnectionState);
 
         if (iceConnectionState == PeerConnection.IceConnectionState.DISCONNECTED) {
-            //            mObserver.onRemove(mId);
             mRtcListener.onRemoveRemoteStream(endPoint);
         }
         if (mRtcListener != null) {
@@ -173,6 +147,7 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
 
     @Override
     public void onIceGatheringChange(PeerConnection.IceGatheringState iceGatheringState) {
+        Log.d(TAG, mId + "::onIceGatheringChange: " + iceGatheringState.toString());
     }
 
     @Override
@@ -183,25 +158,13 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
                 "\ncandidate.sdpMid:: " + candidate.sdpMid);
         Log.d(TAG, mId + "::onIceCandidate: candidate.sdp:: \n" + candidate.sdp);
 
-        try {
-            JSONObject payload = new JSONObject();
-            payload.put("sdpMLineIndex", candidate.sdpMLineIndex);
-            payload.put("sdpMid", candidate.sdpMid);
-            payload.put("candidate", candidate.sdp);
-
-            JSONObject msg = new JSONObject();
-            msg.put("event", "candidate");
-            msg.put("connectedUser", mId);
-            msg.put("candidate", payload);
-            sendMessage(msg);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
+       sendCandidate(candidate);
     }
+
+
 
     @Override
     public void onIceCandidatesRemoved(IceCandidate[] iceCandidates) {
-        //====================================
         Log.d(TAG, mId + "::onIceCandidatesRemoved: ");
     }
 
@@ -220,8 +183,6 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
     @Override
     public void onRemoveStream(MediaStream mediaStream) {
         Log.d(TAG, mId + "::onRemoveStream " + mediaStream.label());
-        //        if (mObserver != null)
-        //            mObserver.onRemove(mId);
         mConnection.removeStream(mMS);
         mRtcListener.onRemoveRemoteStream(endPoint);
         //        dispose();
@@ -237,11 +198,44 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
 
     @Override
     public void onAddTrack(RtpReceiver rtpReceiver, MediaStream[] mediaStreams) {
-        //================================
-        Log.d(TAG, "onAddTrack: ");
+        Log.d(TAG, mId + "::onAddTrack: " + rtpReceiver.toString());
     }
     //-------------------------------------PeerConnection.Observer interface end---------------------------------------------------------------
 
+
+    private void sendSDP(SessionDescription sdp) {
+        try {
+            JSONObject payload = new JSONObject();
+            payload.put("type", sdp.type.canonicalForm());
+            payload.put("sdp", sdp.description);
+
+            JSONObject msg = new JSONObject();
+            msg.put("event", sdp.type.canonicalForm());
+            msg.put("connectedUser", mId);
+            msg.put(sdp.type.canonicalForm(), payload);
+            sendMessage(msg);
+            mConnection.setLocalDescription(this, sdp);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void sendCandidate(IceCandidate candidate) {
+        try {
+            JSONObject payload = new JSONObject();
+            payload.put("sdpMLineIndex", candidate.sdpMLineIndex);
+            payload.put("sdpMid", candidate.sdpMid);
+            payload.put("candidate", candidate.sdp);
+
+            JSONObject msg = new JSONObject();
+            msg.put("event", "candidate");
+            msg.put("connectedUser", mId);
+            msg.put("candidate", payload);
+            sendMessage(msg);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
 
     public void sendMessage(String msg) {
         mSocket.send(msg);

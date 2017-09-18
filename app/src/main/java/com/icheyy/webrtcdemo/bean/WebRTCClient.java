@@ -45,15 +45,9 @@ public class WebRTCClient {
 
     private PeerManager mPM;
 
-    //    private PeerConnectionFactory factory;
-    //    private final static int MAX_PEER = 2;
-    //    private boolean[] endPoints = new boolean[MAX_PEER];
-    //    private HashMap<String, Peer> peers = new HashMap<>();
-
     // 本地连接接口
     private io.socket.client.Socket mSocket;
-    private String mSelfId/*, mConnectedId*/;
-
+    private String mSelfId;
 
     // 本地连接参数和媒体信息
     private PeerConnectionParameters pcParams;
@@ -63,10 +57,12 @@ public class WebRTCClient {
     private MediaStream localMS;
     private MediaConstraints pcConstraints = new MediaConstraints();
 
-
     private RtcListener mListener;
     private RtcSignallingListener mSignallingListener;
 
+    private Handler mHandler = BaseAppActivity.mHandler;
+    private Context mContext;
+    private PeerConnectionFactory factory;
 
     /**
      * Implement this interface to be notified of events.
@@ -85,18 +81,7 @@ public class WebRTCClient {
 
     public interface RtcSignallingListener {
         void onshow(JSONObject jsonAllUsers);
-
-
     }
-
-    public void setSignallingListener(RtcSignallingListener signallingListener) {
-        mSignallingListener = signallingListener;
-    }
-
-
-    private Handler mHandler = BaseAppActivity.mHandler;
-    private Context mContext;
-    private PeerConnectionFactory factory;
 
 
     public WebRTCClient(RtcListener listener, RtcSignallingListener signallingListener, String host, IO.Options options,
@@ -112,7 +97,7 @@ public class WebRTCClient {
         pcConstraints.mandatory.add(new MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"));
         pcConstraints.optional.add(new MediaConstraints.KeyValuePair("DtlsSrtpKeyAgreement", "true"));
 
-        mSocket = initNativeSocket(host, options);
+        mSocket = getSocket(host, options);
 
         // creatPeerConnectionFactory
         PeerConnectionFactory.initializeAndroidGlobals(
@@ -130,7 +115,7 @@ public class WebRTCClient {
     /**
      * 初始化本地socket
      */
-    private io.socket.client.Socket initNativeSocket(String host, IO.Options options) {
+    private io.socket.client.Socket getSocket(String host, IO.Options options) {
 
         try {
             //            mSocket = IO.socket(host);
@@ -231,56 +216,27 @@ public class WebRTCClient {
             public void run() {
                 AlertDialog dialog = new AlertDialog.Builder(mContext)
                         .setTitle("视频邀请")
-                        .setMessage("来自 " + name + " 的视频邀请，是否接受？")
-                        .setPositiveButton("Accept", new DialogInterface.OnClickListener() {
+                        .setMessage("来自 " + name + " 的视频邀请，是否接收？")
+                        .setPositiveButton("接收", new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
 
                                 mHandler.postDelayed(new Runnable() {
                                     @Override
                                     public void run() {
-                                        JSONObject msg = new JSONObject();
-                                        try {
-                                            msg.put("event", "accept");
-                                            msg.put("connectedUser", name);
-                                            msg.put("accept", true);
-                                        } catch (JSONException e) {
-                                            e.printStackTrace();
-                                        }
-                                        Log.d(TAG, "onClick: sendAccept:: " + msg.toString());
-                                        mSocket.send(msg.toString());
-
+                                        sendAccept(name, true);
                                     }
-                                }, 3000);
+                                }, 1000);
 
-                                if (!mPM.containPeer(name)) {
-                                    createRemotePeer(name);
-                                }
-
-                                Intent intent = new Intent(mContext, CallActivity.class);
-                                intent.putExtra(CallActivity.EXTRA_USER_NAME, mSelfId);
-                                intent.putExtra(CallActivity.EXTRA_CALLER_NAME, name);
-                                intent.putExtra(CallActivity.EXTRA_IS_CALLED, true);
-
-                                mContext.startActivity(intent);
-
-
+                                createRemotePeer(name);
+                                startCallActivity(name);
                                 dialog.cancel();
                             }
                         })
-                        .setNegativeButton("Reject", new DialogInterface.OnClickListener() {
+                        .setNegativeButton("拒绝", new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
-                                JSONObject msg = new JSONObject();
-                                try {
-                                    msg.put("event", "accept");
-                                    msg.put("connectedUser", name);
-                                    msg.put("accept", false);
-                                } catch (JSONException e) {
-                                    e.printStackTrace();
-                                }
-                                Log.d(TAG, "onClick: sendReject:: " + msg.toString());
-                                mSocket.send(msg.toString());
+                                sendAccept(name, false);
                                 dialog.cancel();
                             }
                         }).create();
@@ -289,18 +245,20 @@ public class WebRTCClient {
         });
     }
 
+
+
     private void handleAccept(JSONObject data) throws JSONException {
         boolean isAccept = (boolean) data.get("accept");
         Log.d(TAG, "handleAccept: isAccept:: " + isAccept);
         if (isAccept) {
-            String mConnectedId = getSelfPeer().getCallerId();
-            if (!mPM.containPeer(mConnectedId)) {
-                createRemotePeer(mConnectedId);
+            String mCallerId = getSelfPeer().getCallerId();
+            if (!mPM.containPeer(mCallerId)) {
+                createRemotePeer(mCallerId);
             }
-            Peer peer = mPM.getPeer(mConnectedId);
+            Peer peer = mPM.getPeer(mCallerId);
             peer.setRTCListener(mListener);
             peer.setCallerId(mSelfId);
-            Log.i(TAG, "handleAccept: mConnectedId:: " + mConnectedId);
+            Log.i(TAG, "handleAccept: mCallerId:: " + mCallerId);
             Log.d(TAG, "handleAccept: peer:: " + peer);
             Log.d(TAG, "handleAccept: peerConn:: " + peer.getPeerConnection());
             peer.getPeerConnection().createOffer(peer, pcConstraints);
@@ -329,20 +287,6 @@ public class WebRTCClient {
         peer.getPeerConnection().createAnswer(peer, pcConstraints);
     }
 
-    private void handleCandidate(JSONObject data) throws JSONException {
-        JSONObject candidate = (JSONObject) data.get("candidate");
-        Log.d(TAG, "handleCandidate: candidate:: " + candidate);
-        String mConnectedId = getSelfPeer().getCallerId();
-        Peer peer = mPM.getPeer(mConnectedId);
-        peer.getPeerConnection().addIceCandidate(new IceCandidate(candidate.getString("sdpMid"),
-                candidate.getInt("sdpMLineIndex"), candidate.getString("candidate")));
-    }
-
-    private void handleMsg(JSONObject data) throws JSONException {
-        String message = (String) data.get("message");
-        Log.i(TAG, "handleMsg: message:: " + message);
-    }
-
     private void handleAnswer(JSONObject data) throws JSONException {
         JSONObject answer = (JSONObject) data.get("answer");
         Log.d(TAG, "handleAnswer: answer:: " + answer);
@@ -355,45 +299,55 @@ public class WebRTCClient {
         peer.getPeerConnection().setRemoteDescription(peer, sdp);
     }
 
+    private void handleCandidate(JSONObject data) throws JSONException {
+        JSONObject candidate = (JSONObject) data.get("candidate");
+        Log.d(TAG, "handleCandidate: candidate:: " + candidate);
+        String mConnectedId = getSelfPeer().getCallerId();
+        Peer peer = mPM.getPeer(mConnectedId);
+        peer.getPeerConnection().addIceCandidate(new IceCandidate(candidate.getString("sdpMid"),
+                candidate.getInt("sdpMLineIndex"), candidate.getString("candidate")));
+    }
+
     public void handleLeave() {
         Log.d(TAG, "handleLeave: ");
         mHandler.post(new Runnable() {
             @Override
             public void run() {
-                Toast.makeText(mContext, "Chat finished! ", Toast.LENGTH_SHORT).show();
+                Toast.makeText(mContext, "通话结束", Toast.LENGTH_SHORT).show();
             }
         });
 
-        String callerId = getSelfPeer().getCallerId();
-//        mPM.removePeer(callerId);
+//        String callerId = getSelfPeer().getCallerId();
+//                mPM.removePeer(callerId);
 
         if (mListener != null) {
             mListener.onRemoveRemoteStream(1);
             mListener = null;
         }
 
-//        mPM.dispose();
+        //        mPM.dispose();
         //        getSelfPeer().setCallerId(null);
 
     }
 
-    private void closeSocket() {
-        mSocket.disconnect();
-        mSocket.close();
+    private void handleMsg(JSONObject data) throws JSONException {
+        String message = (String) data.get("message");
+        Log.i(TAG, "handleMsg: message:: " + message);
     }
+
 
     /**
      * Call this method in Activity.onPause()
      */
     public void onPause() {
-//                if (videoSource != null) videoSource.stop();
+        //                if (videoSource != null) videoSource.stop();
     }
 
     /**
      * Call this method in Activity.onResume()
      */
     public void onResume() {
-//                if (videoSource != null) videoSource.restart();
+        //                if (videoSource != null) videoSource.restart();
     }
 
     /**
@@ -408,7 +362,7 @@ public class WebRTCClient {
             videoSource = null;
         }
 
-        if(mPM != null) {
+        if (mPM != null) {
             Log.d(TAG, "PeerManager dispose");
             mPM.dispose();
             mPM = null;
@@ -430,6 +384,13 @@ public class WebRTCClient {
 
     }
 
+    private void closeSocket() {
+        if(mSocket != null) {
+            mSocket.disconnect();
+            mSocket.close();
+            mSocket = null;
+        }
+    }
 
     /**
      * Start the client.
@@ -439,14 +400,13 @@ public class WebRTCClient {
      */
     public void start(EglBase.Context renderEGLContext) {
         initPeerConnectFactory(renderEGLContext);
-        getSelfPeer().setStream(localMS);
+//        getSelfPeer().setStream(localMS);
     }
 
     private void initPeerConnectFactory(EglBase.Context renderEGLContext) {
 
         localMS = factory.createLocalMediaStream("ARDAMS");
         Log.i(TAG, "initPeerConnectFactory: localMS:: " + localMS);
-
 
         VideoTrack track = null;
         if (pcParams.videoCallEnabled) {
@@ -529,35 +489,20 @@ public class WebRTCClient {
         return null;
     }
 
-    //    private VideoCapturer getVideoCapturer() {
-    //        String frontCameraDeviceName = VideoCapturerAndroid.getNameOfFrontFacingDevice();
-    //        Log.d(TAG, "getVideoCapturer: frontCameraDeviceName:: " + frontCameraDeviceName);
-    //
-    //        if (frontCameraDeviceName == null) {
-    //            String[] deviceNames = VideoCapturerAndroid.getDeviceNames();
-    //            if (deviceNames == null || deviceNames.length == 0) return null;
-    //            for (String devName : deviceNames) {
-    //                Log.i(TAG, "getVideoCapturer: devName:: " + devName);
-    //            }
-    //            frontCameraDeviceName = deviceNames[0];
-    //        }
-    //        //权限没开，则此处报错 E/VideoCapturerAndroid: InitStatics failed
-    //        return VideoCapturerAndroid.create(frontCameraDeviceName);
-    //    }
-
-
     private void createLocalPeer(String name) {
         createPeer(name, 0);
     }
 
     private void createRemotePeer(String name) {
-        createPeer(name, 1);
+        if (!mPM.containPeer(name)) {
+            createPeer(name, 1);
+        }
     }
 
     private void createPeer(String name, int endPoint) {
         Peer peer = new Peer(name, endPoint, mSocket);
         if (factory == null) {
-            Log.e(TAG, "faile createPeer " +  name + ", PeerConnectionFactory is null");
+            Log.e(TAG, "faile createPeer " + name + ", PeerConnectionFactory is null");
             return;
         }
         PeerConnection pc = factory.createPeerConnection(getRTCConfig(), pcConstraints, peer);
@@ -567,20 +512,19 @@ public class WebRTCClient {
     }
 
     public void toJoin(String name) {
-        Log.i(TAG, "toJoin: ====================");
         Log.d(TAG, "toJoin: Local name:: " + name);
         if (TextUtils.isEmpty(name)) {
             Log.e(TAG, "toJoin: Ooops...this username cannot be empty, please try again");
             return;
         }
 
-        sendMsJoin(name);
+        sendJoin(name);
         createLocalPeer(name);
         mSelfId = name;
 
     }
 
-    private void sendMsJoin(String name) {
+    private void sendJoin(String name) {
         JSONObject msg = new JSONObject();
         try {
             msg.put("event", "join");
@@ -591,6 +535,19 @@ public class WebRTCClient {
         sendMessage(msg);
         mPM.dispose();
     }
+    private void sendAccept(String toName, boolean isAccept) {
+        JSONObject msg = new JSONObject();
+        try {
+            msg.put("event", "accept");
+            msg.put("connectedUser", toName);
+            msg.put("accept", isAccept);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        Log.d(TAG, "onClick: sendAccept:: " + msg.toString());
+        mSocket.send(msg.toString());
+    }
+
 
     public void sendMessage(String msg) {
         if (mSocket != null)
@@ -619,11 +576,23 @@ public class WebRTCClient {
         return rtcConfig;
     }
 
+    private void startCallActivity(String toName) {
+        Intent intent = new Intent(mContext, CallActivity.class);
+        intent.putExtra(CallActivity.EXTRA_USER_NAME, mSelfId);
+        intent.putExtra(CallActivity.EXTRA_CALLER_NAME, toName);
+        intent.putExtra(CallActivity.EXTRA_IS_CALLED, true);
+
+        mContext.startActivity(intent);
+    }
+
 
     public void setListener(RtcListener listener) {
         mListener = listener;
     }
 
+    public void setSignallingListener(RtcSignallingListener signallingListener) {
+        mSignallingListener = signallingListener;
+    }
 
     public String getSelfId() {
         return mSelfId;

@@ -1,6 +1,7 @@
 package com.icheyy.webrtcdemo.activity;
 
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
@@ -129,6 +130,17 @@ public class CallActivity extends BaseAppActivity {
         setContentView(R.layout.activity_main);
 
         initViews();
+
+        // Check for mandatory permissions.  检查权限
+        for (String permission : MANDATORY_PERMISSIONS) {
+            if (checkCallingOrSelfPermission(permission) != PackageManager.PERMISSION_GRANTED) {
+                logAndToast("Permission " + permission + " is not granted");
+                setResult(RESULT_CANCELED);
+                finish();
+                return;
+            }
+        }
+
 
         final Intent intent = getIntent();
         // Get Intent parameters. 取得用户名

@@ -162,7 +162,7 @@ public abstract class BaseAppActivity extends Activity {
         if (logToast != null) {
             logToast.cancel();
         }
-        logToast = Toast.makeText(this, msg, Toast.LENGTH_SHORT);
+        logToast = Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_LONG);
         logToast.show();
     }
 }
