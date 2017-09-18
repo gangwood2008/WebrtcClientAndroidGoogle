@@ -206,12 +206,12 @@ public class CallActivity extends BaseAppActivity {
     public void toCall(String callerName) {
         Log.d(TAG, "toCall: ====================");
 
-        sendMsCall(callerName);
+        sendCall(callerName);
         pcClient.getSelfPeer().setCallerId(callerName);
 
     }
 
-    private void sendMsCall(String callerName) {
+    private void sendCall(String callerName) {
         JSONObject msg = new JSONObject();
         try {
             msg.put("event", "call");
@@ -225,16 +225,17 @@ public class CallActivity extends BaseAppActivity {
 
     public void toHangUp() {
         Log.d(TAG, "click2HangUp: ====================");
+        Peer caller = pcClient.getPeer(pcClient.getSelfPeer().getCallerId());
         JSONObject msg = new JSONObject();
         try {
             msg.put("event", "leave");
-            msg.put("connectedUser", pcClient.getSelfId());
+            msg.put("connectedUser", caller.getId());
         } catch (JSONException e) {
             e.printStackTrace();
         }
         pcClient.getSelfPeer().sendMessage(msg);
 
-        PeerConnection pc = pcClient.getPeer(pcClient.getSelfPeer().getCallerId()).getPeerConnection();
+        PeerConnection pc = caller.getPeerConnection();
         pc.close();
 
         if (!isSwappedFeeds)
