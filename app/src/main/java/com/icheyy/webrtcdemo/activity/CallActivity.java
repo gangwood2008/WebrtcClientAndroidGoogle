@@ -11,7 +11,7 @@ import android.widget.Toast;
 import com.icheyy.webrtcdemo.ProxyRenderer;
 import com.icheyy.webrtcdemo.R;
 import com.icheyy.webrtcdemo.base.BaseAppActivity;
-import com.icheyy.webrtcdemo.bean.Peer;
+import com.icheyy.webrtcdemo.bean.RemoterPeer;
 import com.icheyy.webrtcdemo.bean.PeerConnectionClient;
 
 import org.json.JSONException;
@@ -211,10 +211,12 @@ public class CallActivity extends BaseAppActivity {
 
     public void toHangUp() {
         Log.d(TAG, "toHangUp: ====================");
-        Peer remoterPeer = pcClient.getRemoterPeer();
-        sendHangUp(remoterPeer);
-        PeerConnection pc = remoterPeer.getPeerConnection();
-        pc.close();
+        RemoterPeer remoterPeer = pcClient.getRemoterPeer();
+        if(remoterPeer != null) {
+            sendHangUp(remoterPeer);
+            PeerConnection pc = remoterPeer.getPeerConnection();
+            pc.close();
+        }
 
         if (!isSwappedFeeds)
             setSwappedFeeds(true);
@@ -224,8 +226,11 @@ public class CallActivity extends BaseAppActivity {
 
     @Override
     public void onPause() {
+//        if (pcClient != null) {
+//            pcClient.onPause();
+//        }
         if (pcClient != null) {
-            pcClient.onPause();
+            pcClient.stopVideoSource();
         }
         super.onPause();
     }
@@ -234,7 +239,7 @@ public class CallActivity extends BaseAppActivity {
     public void onResume() {
         super.onResume();
         if (pcClient != null) {
-            pcClient.onResume();
+            pcClient.startVideoSource();
         }
         pcClient.setListener(mRtcListener);
 
@@ -243,11 +248,6 @@ public class CallActivity extends BaseAppActivity {
     @Override
     protected void onStop() {
 
-
-        //        pcClient.handleLeave();
-        if (pcClient != null) {
-            pcClient.stopVideoSource();
-        }
         super.onStop();
     }
 
@@ -353,7 +353,7 @@ public class CallActivity extends BaseAppActivity {
     }
 
 
-    private void sendHangUp(Peer remoterPeer) {
+    private void sendHangUp(RemoterPeer remoterPeer) {
         JSONObject msg = new JSONObject();
         try {
             msg.put("event", "leave");

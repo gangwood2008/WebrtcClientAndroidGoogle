@@ -42,16 +42,14 @@ import io.socket.client.IO;
 public class PeerConnectionClient {
     private final static String TAG = "PeerConnectionClient";
 
+    private Handler mHandler = BaseAppActivity.mHandler;
+    private Context mContext;
+    private PeerConnectionFactory factory;
     // 本地连接接口
     private io.socket.client.Socket mSocket;
     private String mSelfId;
-
-    public void setRemoterId(String remoterId) {
-        mRemoterId = remoterId;
-    }
-
     private String mRemoterId;
-
+    private RemoterPeer mRemoterPeer;
     // 本地连接参数和媒体信息
     private PeerConnectionParameters pcParams;
 
@@ -63,15 +61,9 @@ public class PeerConnectionClient {
     private RtcListener mListener;
     private RtcSignallingListener mSignallingListener;
 
-    private Handler mHandler = BaseAppActivity.mHandler;
-    private Context mContext;
-    private PeerConnectionFactory factory;
 
-    public Peer getRemoterPeer() {
-        return mRemoterPeer;
-    }
 
-    private Peer mRemoterPeer;
+
 
     /**
      * Implement this interface to be notified of events.
@@ -233,7 +225,6 @@ public class PeerConnectionClient {
                 }
             });
         }
-//        getSelfPeer().setRTCListener(mListener);
     }
 
     private void handleCall(JSONObject data) throws JSONException {
@@ -353,20 +344,6 @@ public class PeerConnectionClient {
         }
     }
 
-
-    /**
-     * Call this method in Activity.onPause()
-     */
-    public void onPause() {
-        //                if (videoSource != null) videoSource.stop();
-    }
-
-    /**
-     * Call this method in Activity.onResume()
-     */
-    public void onResume() {
-        //                if (videoSource != null) videoSource.restart();
-    }
 
     /**
      * Call this method in Activity.onDestroy()
@@ -504,7 +481,7 @@ public class PeerConnectionClient {
 
     private void createRemotePeer(String name) {
         if (mRemoterPeer == null) {
-            mRemoterPeer = new Peer(name, mSocket,mLocalMS);
+            mRemoterPeer = new RemoterPeer(name, mSocket,mLocalMS);
             if (factory == null) {
                 Log.e(TAG, "faile createPeer " + name + ", PeerConnectionFactory is null");
                 return;
@@ -592,7 +569,13 @@ public class PeerConnectionClient {
         mListener = listener;
     }
 
+    public RemoterPeer getRemoterPeer() {
+        return mRemoterPeer;
+    }
 
+    public void setRemoterId(String remoterId) {
+        mRemoterId = remoterId;
+    }
 
 
 }

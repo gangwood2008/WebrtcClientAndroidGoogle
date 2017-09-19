@@ -17,8 +17,8 @@ import org.webrtc.SessionDescription;
  * Created by Dell on 2017/9/13.
  */
 
-public class Peer implements SdpObserver, PeerConnection.Observer {
-    private static final String TAG = Peer.class.getSimpleName() + "_LOG";
+public class RemoterPeer implements SdpObserver, PeerConnection.Observer {
+    private static final String TAG = RemoterPeer.class.getSimpleName();
 
     /**
      * 连接通道
@@ -28,26 +28,21 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
      * 用户名
      */
     private String mId;
-
-
-    private PeerConnectionClient.RtcListener mRtcListener;
-    private io.socket.client.Socket mSocket;
     /**
      * 通道流信息
      */
     private MediaStream mMS;
 
+    private PeerConnectionClient.RtcListener mRtcListener;
+    private io.socket.client.Socket mSocket;
 
-    public Peer(String id, io.socket.client.Socket socket, MediaStream ms) {
-        Log.d(TAG, "new Peer: " + id);
 
+
+    public RemoterPeer(String id, io.socket.client.Socket socket, MediaStream ms) {
+        Log.d(TAG, "new RemoterPeer: " + id + "::RemoterPeer: localMS:: " + ms);
         this.mId = id;
         mSocket = socket;
-
-        Log.d(TAG, mId + "::Peer: localMS:: " + ms);
-
         mMS = ms;
-
     }
 
     public void setRTCListener(PeerConnectionClient.RtcListener listener) {
@@ -71,7 +66,6 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
             mConnection.dispose();
             mConnection = null;
         }
-        //        mConnection.dispose();
     }
 
 
@@ -246,6 +240,6 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
 
     @Override
     public String toString() {
-        return "Peer{mConnection: " + mConnection + ", mId: " + mId + "}";
+        return "RemoterPeer{mConnection: " + mConnection + ", mId: " + mId + "}";
     }
 }

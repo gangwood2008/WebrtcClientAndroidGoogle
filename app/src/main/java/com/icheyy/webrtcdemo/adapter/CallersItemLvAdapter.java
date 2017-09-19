@@ -50,10 +50,15 @@ public class CallersItemLvAdapter extends BaseAdapter {
 
         Caller caller = mContentList.get(position);
         holder.tv_caller_name.setText(caller.getName());
-        if(caller.getStatus())
+        if (caller.getStatus()) {
             holder.tv_caller_status.setText("在线");
-        else
+            holder.tv_caller_status.setTextColor(0xff7cfc00);
+
+        } else {
+
             holder.tv_caller_status.setText("正在通话");
+            holder.tv_caller_status.setTextColor(0xffff0000);
+        }
 
         return convertView;
     }

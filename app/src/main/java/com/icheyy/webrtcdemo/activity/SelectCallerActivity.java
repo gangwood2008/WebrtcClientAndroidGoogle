@@ -289,8 +289,12 @@ public class SelectCallerActivity extends BaseAppActivity implements View.OnClic
                 keyprefP2PServerUrl, getString(R.string.pref_p2p_server_url_default));
         String userName = sharedPref.getString(
                 keyprefUserName, "");
-        Log.e(TAG, "goToCall: "+ tv_caller_name.getText().toString().split("：")[1]);
-        String callerName = tv_caller_name.getText().toString().split("：")[1];
+
+        String spString[] = tv_caller_name.getText().toString().split("：");
+        if(spString.length < 2)
+            return;
+        Log.d(TAG, "goToCall: "+ spString[1]);
+        String callerName = spString[1];
         if(callerName == null || callerName.isEmpty())
             return;
 
