@@ -29,16 +29,8 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
      */
     private String mId;
 
-    /**
-     * 远端用户名
-     */
-    private String mCallerId;
-    /**
-     * 端口号
-     */
-    private int endPoint;
 
-    private WebRTCClient.RtcListener mRtcListener;
+    private PeerConnectionClient.RtcListener mRtcListener;
     private io.socket.client.Socket mSocket;
     /**
      * 通道流信息
@@ -46,34 +38,30 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
     private MediaStream mMS;
 
 
-    public Peer(String id, int endPoint, io.socket.client.Socket socket) {
-        Log.d(TAG, "new Peer: " + id + " " + endPoint);
+    public Peer(String id, io.socket.client.Socket socket, MediaStream ms) {
+        Log.d(TAG, "new Peer: " + id);
 
         this.mId = id;
-        this.endPoint = endPoint;
         mSocket = socket;
-    }
 
-    public void setRTCListener(WebRTCClient.RtcListener listener) {
-        mRtcListener = listener;
-    }
-
-    public void setStream(MediaStream ms) {
         Log.d(TAG, mId + "::Peer: localMS:: " + ms);
-        if (ms != null) {
-            mMS = ms;
-            mConnection.addStream(ms);
-        }
+
+        mMS = ms;
+
+    }
+
+    public void setRTCListener(PeerConnectionClient.RtcListener listener) {
+        mRtcListener = listener;
     }
 
     public void setPeerConnection(PeerConnection pc) {
         this.mConnection = pc;
+        mConnection.addStream(mMS);
     }
 
     public void dispose() {
         Log.d(TAG, "dispose: " + mId);
         if (mRtcListener != null) {
-            mRtcListener.onRemoveRemoteStream(endPoint);
             mRtcListener = null;
         }
         if (mConnection != null) {
@@ -98,7 +86,6 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
         Log.d(TAG, "onCreateSuccess: sdp.description:: \n" + sdp.description);
         Log.i(TAG, "onCreateSuccess: sdp.type.canonicalForm():: " + sdp.type.canonicalForm());
         Log.i(TAG, "onCreateSuccess: mId " + mId);
-        Log.i(TAG, "onCreateSuccess: mCallerId " + mCallerId);
 
         sendSDP(sdp);
     }
@@ -133,7 +120,7 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
         Log.d(TAG, mId + "::onIceConnectionChange: " + iceConnectionState);
 
         if (iceConnectionState == PeerConnection.IceConnectionState.DISCONNECTED) {
-            mRtcListener.onRemoveRemoteStream(endPoint);
+            mRtcListener.onRemoveRemoteStream();
         }
         if (mRtcListener != null) {
             mRtcListener.onStatusChanged(mId, iceConnectionState);
@@ -158,9 +145,8 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
                 "\ncandidate.sdpMid:: " + candidate.sdpMid);
         Log.d(TAG, mId + "::onIceCandidate: candidate.sdp:: \n" + candidate.sdp);
 
-       sendCandidate(candidate);
+        sendCandidate(candidate);
     }
-
 
 
     @Override
@@ -173,7 +159,7 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
         Log.d(TAG, mId + "::onAddStream " + mediaStream.label());
 
         if (mediaStream.videoTracks.size() == 1) {
-            mRtcListener.onAddRemoteStream(mediaStream, endPoint);
+            mRtcListener.onAddRemoteStream(mediaStream, 1);
         }
 
         //            // remote streams are displayed from 1 to MAX_PEER (0 is localStream)
@@ -184,8 +170,7 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
     public void onRemoveStream(MediaStream mediaStream) {
         Log.d(TAG, mId + "::onRemoveStream " + mediaStream.label());
         mConnection.removeStream(mMS);
-        mRtcListener.onRemoveRemoteStream(endPoint);
-        //        dispose();
+        mRtcListener.onRemoveRemoteStream();
     }
 
     @Override
@@ -253,25 +238,14 @@ public class Peer implements SdpObserver, PeerConnection.Observer {
         return mId;
     }
 
-    public int getEndPoint() {
-        return endPoint;
-    }
 
     public PeerConnection getPeerConnection() {
         return mConnection;
     }
 
-    public String getCallerId() {
-        return mCallerId;
-    }
-
-    public void setCallerId(String callerId) {
-        mCallerId = callerId;
-    }
-
 
     @Override
     public String toString() {
-        return "Peer{mConnection: " + mConnection + ", mId: " + mId + ", endPoint: " + endPoint + "}";
+        return "Peer{mConnection: " + mConnection + ", mId: " + mId + "}";
     }
 }

@@ -5,13 +5,14 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.widget.Toast;
 
 import com.icheyy.webrtcdemo.ProxyRenderer;
 import com.icheyy.webrtcdemo.R;
 import com.icheyy.webrtcdemo.base.BaseAppActivity;
 import com.icheyy.webrtcdemo.bean.Peer;
-import com.icheyy.webrtcdemo.bean.WebRTCClient;
+import com.icheyy.webrtcdemo.bean.PeerConnectionClient;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -159,13 +160,7 @@ public class CallActivity extends BaseAppActivity {
 
         Boolean isCalled = intent.getBooleanExtra(EXTRA_IS_CALLED, false);
         if (!isCalled) {//是呼叫方
-            // Get Intent parameters. 取得用户名
-
             toCall(callerName);
-        }else {
-            // 被呼叫
-            Peer caller = pcClient.getPeer(pcClient.getSelfPeer().getCallerId());
-            caller.setRTCListener(mRtcListener);
         }
 
     }
@@ -193,49 +188,32 @@ public class CallActivity extends BaseAppActivity {
     }
 
 
-    private void setSwappedFeeds(boolean isSwappedFeeds) {
-        Logging.d(TAG, "setSwappedFeeds: " + isSwappedFeeds);
-        this.isSwappedFeeds = isSwappedFeeds;
-        localProxyRenderer.setTarget(isSwappedFeeds ? fullscreenRenderer : pipRenderer);
-        remoteProxyRenderer.setTarget(isSwappedFeeds ? pipRenderer : fullscreenRenderer);
-        fullscreenRenderer.setMirror(isSwappedFeeds);
-        pipRenderer.setMirror(!isSwappedFeeds);
-    }
-
-
-    public void toCall(String callerName) {
-        Log.d(TAG, "toCall: ====================");
-
-        sendCall(callerName);
-        pcClient.getSelfPeer().setCallerId(callerName);
-
-    }
-
-    private void sendCall(String callerName) {
-        JSONObject msg = new JSONObject();
-        try {
-            msg.put("event", "call");
-            msg.put("connectedUser", callerName);
-        } catch (JSONException e) {
-            e.printStackTrace();
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if ((keyCode == KeyEvent.KEYCODE_BACK)) {
+            toHangUp();
+            return false;
+        }else {
+            return super.onKeyDown(keyCode, event);
         }
-        pcClient.getSelfPeer().sendMessage(msg);
+
     }
 
+
+
+
+    public void toCall(String remoterId) {
+        Log.d(TAG, "toCall: ====================");
+        pcClient.setRemoterId(remoterId);
+        sendCall(remoterId);
+
+    }
 
     public void toHangUp() {
-        Log.d(TAG, "click2HangUp: ====================");
-        Peer caller = pcClient.getPeer(pcClient.getSelfPeer().getCallerId());
-        JSONObject msg = new JSONObject();
-        try {
-            msg.put("event", "leave");
-            msg.put("connectedUser", caller.getId());
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        pcClient.getSelfPeer().sendMessage(msg);
-
-        PeerConnection pc = caller.getPeerConnection();
+        Log.d(TAG, "toHangUp: ====================");
+        Peer remoterPeer = pcClient.getRemoterPeer();
+        sendHangUp(remoterPeer);
+        PeerConnection pc = remoterPeer.getPeerConnection();
         pc.close();
 
         if (!isSwappedFeeds)
@@ -264,7 +242,7 @@ public class CallActivity extends BaseAppActivity {
 
     @Override
     protected void onStop() {
-        toHangUp();
+
 
         //        pcClient.handleLeave();
         if (pcClient != null) {
@@ -277,10 +255,11 @@ public class CallActivity extends BaseAppActivity {
     public void onDestroy() {
         Log.d(TAG, "onDestroy");
         disconnect();
+        pcClient.removeRemoterPeer();
         super.onDestroy();
     }
 
-    private WebRTCClient.RtcListener mRtcListener = new WebRTCClient.RtcListener() {
+    private PeerConnectionClient.RtcListener mRtcListener = new PeerConnectionClient.RtcListener() {
 
         @Override
         public void onConnectSocketFinish(boolean result) {
@@ -296,7 +275,7 @@ public class CallActivity extends BaseAppActivity {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            Toast.makeText(CallActivity.this, id + " DISCONNECTED", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(getApplication().getApplicationContext(), id + " 通话关闭", Toast.LENGTH_LONG).show();
                         }
                     });
                     if (!isSwappedFeeds)
@@ -304,6 +283,7 @@ public class CallActivity extends BaseAppActivity {
                     pipRenderer.clearImage();
                     mRemoteVideoTrack = null;
                     remoteProxyRenderer.setTarget(null);
+                    finish();
                     break;
             }
         }
@@ -318,11 +298,6 @@ public class CallActivity extends BaseAppActivity {
                 return;
             track.addRenderer(new VideoRenderer(localProxyRenderer));
 
-            //        localStream.videoTracks.get(0).addRenderer(new VideoRenderer(localRender));
-            //        VideoRendererGui.update(localRender,
-            //                LOCAL_X_CONNECTING, LOCAL_Y_CONNECTING,
-            //                LOCAL_WIDTH_CONNECTING, LOCAL_HEIGHT_CONNECTING,
-            //                scalingType);
         }
 
         @Override
@@ -340,7 +315,7 @@ public class CallActivity extends BaseAppActivity {
         }
 
         @Override
-        public void onRemoveRemoteStream(int endPoint) {
+        public void onRemoveRemoteStream() {
             Log.d(TAG, "onRemoveRemoteStream");
 
             if (!isSwappedFeeds)
@@ -349,12 +324,19 @@ public class CallActivity extends BaseAppActivity {
             mRemoteVideoTrack = null;
             remoteProxyRenderer.setTarget(null);
 
-            //        VideoRendererGui.update(localRender,
-            //                LOCAL_X_CONNECTING, LOCAL_Y_CONNECTING,
-            //                LOCAL_WIDTH_CONNECTING, LOCAL_HEIGHT_CONNECTING,
-            //                scalingType);
+            finish();
+
         }
     };
+
+    private void setSwappedFeeds(boolean isSwappedFeeds) {
+        Logging.d(TAG, "setSwappedFeeds: " + isSwappedFeeds);
+        this.isSwappedFeeds = isSwappedFeeds;
+        localProxyRenderer.setTarget(isSwappedFeeds ? fullscreenRenderer : pipRenderer);
+        remoteProxyRenderer.setTarget(isSwappedFeeds ? pipRenderer : fullscreenRenderer);
+        fullscreenRenderer.setMirror(isSwappedFeeds);
+        pipRenderer.setMirror(!isSwappedFeeds);
+    }
 
     // Disconnect from remote resources, dispose of local resources, and exit.
     private void disconnect() {
@@ -369,6 +351,30 @@ public class CallActivity extends BaseAppActivity {
             fullscreenRenderer.release();
         }
     }
+
+
+    private void sendHangUp(Peer remoterPeer) {
+        JSONObject msg = new JSONObject();
+        try {
+            msg.put("event", "leave");
+            msg.put("connectedUser", remoterPeer.getId());
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        pcClient.sendMessage(msg);
+    }
+
+    private void sendCall(String remoterId) {
+        JSONObject msg = new JSONObject();
+        try {
+            msg.put("event", "call");
+            msg.put("connectedUser", remoterId);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        pcClient.sendMessage(msg);
+    }
+
 
 
 }

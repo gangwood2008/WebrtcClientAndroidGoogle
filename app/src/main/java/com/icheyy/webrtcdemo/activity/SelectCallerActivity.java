@@ -21,7 +21,7 @@ import com.icheyy.webrtcdemo.R;
 import com.icheyy.webrtcdemo.adapter.CallersItemLvAdapter;
 import com.icheyy.webrtcdemo.base.BaseAppActivity;
 import com.icheyy.webrtcdemo.bean.Caller;
-import com.icheyy.webrtcdemo.bean.WebRTCClient;
+import com.icheyy.webrtcdemo.bean.PeerConnectionClient;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -112,7 +112,7 @@ public class SelectCallerActivity extends BaseAppActivity implements View.OnClic
         }
         if (validateUrl(p2pServerUrl)) {
             Log.d(TAG, "init PeerConnection " + " at URL " + p2pServerUrl);
-            WebRTCClient.RtcSignallingListener signListener = new WebRTCClient.RtcSignallingListener() {
+            PeerConnectionClient.RtcSignallingListener signListener = new PeerConnectionClient.RtcSignallingListener() {
                 @Override
                 public void onshow(JSONObject jsonAllUsers) {
                     Log.d(TAG, "onshow: " + jsonAllUsers);
@@ -122,6 +122,8 @@ public class SelectCallerActivity extends BaseAppActivity implements View.OnClic
                         while (keys.hasNext()) {
                             String key = keys.next();
                             Caller caller = new Caller(key, (Boolean) jsonAllUsers.get(key));
+                            if(caller.getName().equals(tv_user_name.getText().toString()))
+                                continue;
                             mCallersList.add(caller);
                             Log.d(TAG, "CallersList add " + caller);
 
@@ -289,6 +291,8 @@ public class SelectCallerActivity extends BaseAppActivity implements View.OnClic
                 keyprefUserName, "");
         Log.e(TAG, "goToCall: "+ tv_caller_name.getText().toString().split("：")[1]);
         String callerName = tv_caller_name.getText().toString().split("：")[1];
+        if(callerName == null || callerName.isEmpty())
+            return;
 
         // Video call enabled flag.
         boolean videoCallEnabled = sharedPrefGetBoolean(R.string.pref_videocall_key,
@@ -585,7 +589,7 @@ public class SelectCallerActivity extends BaseAppActivity implements View.OnClic
     }
 
 
-    private WebRTCClient.RtcListener mRtcListener = new WebRTCClient.RtcListener() {
+    private PeerConnectionClient.RtcListener mRtcListener = new PeerConnectionClient.RtcListener() {
         @Override
         public void onConnectSocketFinish(boolean result) {
             Toast.makeText(SelectCallerActivity.this, "Socket connect: " + result, Toast.LENGTH_SHORT).show();
@@ -619,7 +623,7 @@ public class SelectCallerActivity extends BaseAppActivity implements View.OnClic
         }
 
         @Override
-        public void onRemoveRemoteStream(int endPoint) {
+        public void onRemoveRemoteStream() {
 
         }
     };
